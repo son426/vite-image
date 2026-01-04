@@ -48,13 +48,13 @@ export default defineConfig({
 });
 ```
 
-**Important**: Use the spread operator (`...viteImage()`) to properly register both plugins.
+**Important**: The `viteImage()` function returns an array of plugins, so you should spread it when adding to the plugins array.
 
 ### 2. Use the Component
 
-#### Method 1: Using `?vite-image` query (Recommended)
+#### Using `?vite-image` query (Required)
 
-The simplest way is to use the `?vite-image` query parameter, which automatically generates all required image data:
+The `?vite-image` query parameter is required and automatically generates all required image data. When using `?vite-image`, the `src` prop must be an object (not a string).
 
 ```typescript
 import Image from "@son426/vite-image/react";
@@ -63,7 +63,7 @@ import bgImage from "@/assets/image.webp?vite-image";
 function MyComponent() {
   return (
     <Image
-      imgData={bgImage}
+      src={bgImage}
       fill={false}
       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
       alt="Description"
@@ -71,6 +71,8 @@ function MyComponent() {
   );
 }
 ```
+
+**Important**: When using `?vite-image`, the `src` prop must receive the imported object directly. String URLs are not supported for `?vite-image` imports.
 
 The `?vite-image` query automatically generates:
 
@@ -79,40 +81,13 @@ The `?vite-image` query automatically generates:
 - `lqipSrc`: Low Quality Image Placeholder (base64 inline)
 - `width` and `height`: Image dimensions
 
-#### Method 2: Using individual props
-
-You can also import and use individual image data:
-
-```typescript
-import Image from "@son426/vite-image/react";
-
-import imageSrcSet from "@/assets/image.webp?w=640;1024;1920&format=webp&as=srcset";
-import imageMeta from "@/assets/image.webp?w=1920&format=webp&as=meta";
-import imageLqipSrc from "@/assets/image.webp?w=20&blur=2&quality=20&format=webp&inline";
-
-function MyComponent() {
-  return (
-    <Image
-      src={imageMeta.src}
-      srcSet={imageSrcSet}
-      lqipSrc={imageLqipSrc}
-      width={imageMeta.width}
-      height={imageMeta.height}
-      fill={false}
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
-      alt="Description"
-    />
-  );
-}
-```
-
 ### Fill Mode
 
 For images that fill their container (similar to Next.js Image):
 
 ```typescript
 <div style={{ position: "relative", width: "100%", height: "400px" }}>
-  <Image imgData={bgImage} fill={true} sizes="100vw" alt="Description" />
+  <Image src={bgImage} fill={true} sizes="100vw" alt="Description" />
 </div>
 ```
 
@@ -120,21 +95,16 @@ For images that fill their container (similar to Next.js Image):
 
 ### Image Props
 
-| Prop        | Type                  | Required | Description                                 |
-| ----------- | --------------------- | -------- | ------------------------------------------- |
-| `imgData`   | `ResponsiveImageData` | No\*     | Image data object from `?vite-image` query  |
-| `src`       | `string`              | Yes\*    | Image source URL                            |
-| `srcSet`    | `string`              | No       | Responsive image srcSet                     |
-| `lqipSrc`   | `string`              | No       | Low Quality Image Placeholder source        |
-| `fill`      | `boolean`             | No       | Fill container mode (default: `false`)      |
-| `width`     | `number`              | Yes\*    | Image width (required when `fill={false}`)  |
-| `height`    | `number`              | Yes\*    | Image height (required when `fill={false}`) |
-| `sizes`     | `string`              | No       | Sizes attribute (default: `"100vw"`)        |
-| `className` | `string`              | No       | Additional CSS classes                      |
-| `style`     | `CSSProperties`       | No       | Additional inline styles                    |
-| `...props`  | `ImgHTMLAttributes`   | No       | All standard img element attributes         |
+| Prop        | Type                  | Required | Description                                |
+| ----------- | --------------------- | -------- | ------------------------------------------ |
+| `src`       | `ResponsiveImageData` | Yes      | Image data object from `?vite-image` query |
+| `fill`      | `boolean`             | No       | Fill container mode (default: `false`)     |
+| `sizes`     | `string`              | No       | Sizes attribute (default: `"100vw"`)       |
+| `className` | `string`              | No       | Additional CSS classes                     |
+| `style`     | `CSSProperties`       | No       | Additional inline styles                   |
+| `...props`  | `ImgHTMLAttributes`   | No       | All standard img element attributes        |
 
-\* Either `imgData` or `src` (with `width` and `height` when `fill={false}`) is required.
+**Note**: The `src` prop must be an object imported from `?vite-image` query. String URLs are not supported. The `width` and `height` are automatically extracted from the `src` object.
 
 ### ResponsiveImageData
 

@@ -5,14 +5,7 @@
  * These types extend the default vite-imagetools types
  */
 
-// ?vite-image import 결과 타입
-interface ResponsiveImageData {
-  src: string;
-  width: number;
-  height: number;
-  srcSet?: string;
-  lqipSrc?: string;
-}
+import type { ResponsiveImageData } from "./types";
 
 // vite-image 쿼리 파라미터 타입
 declare module "*?vite-image" {
@@ -42,15 +35,4 @@ declare module "*?w=*&format=*&as=meta" {
 declare module "*?w=*&blur=*&quality=*&format=*&inline" {
   const src: string;
   export default src;
-}
-
-// 일반 imagetools 확장
-declare module "*&imagetools" {
-  type ImageToolsOutput =
-    | string // 기본 출력
-    | { src: string; width: number; height: number } // meta
-    | string; // srcset
-
-  const out: ImageToolsOutput;
-  export default out;
 }

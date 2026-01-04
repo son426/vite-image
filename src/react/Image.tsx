@@ -5,15 +5,11 @@ import type { ResponsiveImageData } from "../types";
 interface BaseImageProps
   extends Omit<
     ImgHTMLAttributes<HTMLImageElement>,
-    "width" | "height" | "src" | "srcSet"
+    "src" | "srcSet" | "width" | "height"
   > {
+  // 핵심 변경: src는 무조건 최적화된 이미지 객체만 받음
+  src: ResponsiveImageData;
   sizes?: string;
-  src?: string;
-  srcSet?: string;
-  lqipSrc?: string;
-  width?: number;
-  height?: number;
-  imgData?: ResponsiveImageData;
 }
 
 interface FillImageProps extends BaseImageProps {
@@ -27,12 +23,7 @@ interface StandardImageProps extends BaseImageProps {
 export type ImageProps = FillImageProps | StandardImageProps;
 
 export default function Image({
-  imgData,
-  src,
-  srcSet,
-  lqipSrc,
-  width,
-  height,
+  src, // 이제 이 src는 객체입니다.
   fill = false,
   sizes = "100vw",
   className = "",
@@ -41,19 +32,16 @@ export default function Image({
 }: ImageProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
 
-  // 1. 데이터 병합: imgData가 있으면 그걸 쓰고, 없으면 개별 prop 사용
-  const currentSrc = imgData?.src || src;
-  const currentSrcSet = imgData?.srcSet || srcSet;
-  const currentLqip = imgData?.lqipSrc || lqipSrc;
-  const currentWidth = imgData?.width || width;
-  const currentHeight = imgData?.height || height;
+  // 1. 데이터 추출: src 객체에서 바로 꺼내씀 (병합 로직 제거)
+  const {
+    src: currentSrc,
+    srcSet: currentSrcSet,
+    lqipSrc: currentLqip,
+    width: currentWidth,
+    height: currentHeight,
+  } = src;
 
-  if (!currentSrc) {
-    console.warn("Image: 'src' or 'imgData' is required.");
-    return null;
-  }
-
-  // 2. 컨테이너 스타일 계산
+  // 2. 컨테이너 스타일 계산 (기존 로직 유지)
   const containerStyle: CSSProperties = fill
     ? {
         position: "absolute",
@@ -77,7 +65,7 @@ export default function Image({
 
   const mergedContainerStyle = { ...containerStyle, ...style };
 
-  // 3. 실제 이미지 스타일
+  // 3. 실제 이미지 스타일 (기존 로직 유지)
   const imgStyle: CSSProperties = {
     position: "absolute",
     top: 0,
@@ -89,14 +77,14 @@ export default function Image({
     objectFit: "cover",
   };
 
-  // 4. LQIP 스타일
+  // 4. LQIP 스타일 (기존 로직 유지)
   const lqipStyle: CSSProperties = {
     ...imgStyle,
-    filter: "blur(20px)", // blur 효과 강화 (선택사항)
-    transform: "scale(1.1)", // blur 경계선 숨기기
-    transition: "opacity 500ms ease-out", // 부드러운 전환
+    filter: "blur(20px)",
+    transform: "scale(1.1)",
+    transition: "opacity 500ms ease-out",
     opacity: isImageLoaded ? 0 : 1,
-    zIndex: 1, // 로딩 중에는 위에 표시
+    zIndex: 1,
   };
 
   return (

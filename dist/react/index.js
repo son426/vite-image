@@ -3,12 +3,8 @@ import { jsxs, jsx } from 'react/jsx-runtime';
 
 // src/react/Image.tsx
 function Image({
-  imgData,
   src,
-  srcSet,
-  lqipSrc,
-  width,
-  height,
+  // 이제 이 src는 객체입니다.
   fill = false,
   sizes = "100vw",
   className = "",
@@ -16,15 +12,13 @@ function Image({
   ...props
 }) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const currentSrc = imgData?.src || src;
-  const currentSrcSet = imgData?.srcSet || srcSet;
-  const currentLqip = imgData?.lqipSrc || lqipSrc;
-  const currentWidth = imgData?.width || width;
-  const currentHeight = imgData?.height || height;
-  if (!currentSrc) {
-    console.warn("Image: 'src' or 'imgData' is required.");
-    return null;
-  }
+  const {
+    src: currentSrc,
+    srcSet: currentSrcSet,
+    lqipSrc: currentLqip,
+    width: currentWidth,
+    height: currentHeight
+  } = src;
   const containerStyle = fill ? {
     position: "absolute",
     top: 0,
@@ -55,14 +49,10 @@ function Image({
   const lqipStyle = {
     ...imgStyle,
     filter: "blur(20px)",
-    // blur 효과 강화 (선택사항)
     transform: "scale(1.1)",
-    // blur 경계선 숨기기
     transition: "opacity 500ms ease-out",
-    // 부드러운 전환
     opacity: isImageLoaded ? 0 : 1,
     zIndex: 1
-    // 로딩 중에는 위에 표시
   };
   return /* @__PURE__ */ jsxs("div", { className, style: mergedContainerStyle, children: [
     /* @__PURE__ */ jsx(
