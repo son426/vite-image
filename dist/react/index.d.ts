@@ -13,8 +13,8 @@ interface ResponsiveImageData {
     blurDataURL?: string;
 }
 
-type PlaceholderValue = "empty" | "blur" | `data:image/${string}`;
-interface BaseImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "srcSet" | "width" | "height"> {
+type PlaceholderValue = "empty" | "blur" | string;
+interface BaseImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "srcSet" | "width" | "height" | "placeholder"> {
     src: ResponsiveImageData;
     sizes?: string;
     placeholder?: PlaceholderValue;
@@ -34,4 +34,4 @@ fill, sizes, placeholder, // 기본값: empty (Next.js Image 호환)
 priority, // 기본값: false (Next.js Image 호환)
 className, style, onLoad, onError, ...props }: ImageProps): react_jsx_runtime.JSX.Element;
 
-export { type ImageProps, type PlaceholderValue, type ResponsiveImageData, Image as default };
+export { type ImageProps, type ResponsiveImageData, Image as default };

@@ -3,7 +3,7 @@ import { preload } from "react-dom";
 import type { ResponsiveImageData } from "../types";
 
 // placeholder 타입 정의 (Next.js Image 호환)
-type PlaceholderValue = "empty" | "blur" | string; // string은 data:image/... 형식
+type PlaceholderValue = "empty" | "blur" | `data:image/${string}`;
 
 // ?vite-image import 결과 타입
 interface BaseImageProps
