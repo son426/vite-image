@@ -15,6 +15,7 @@ interface BaseImageProps
   src: ResponsiveImageData;
   sizes?: string; // Optional: 제공되지 않으면 자동 계산
   placeholder?: PlaceholderValue; // Next.js Image 호환: 'empty' | 'blur' | 'data:image/...'
+  blurDataURL?: string; // Optional: 커스텀 blur placeholder (src.blurDataURL보다 우선)
   priority?: boolean; // Next.js Image 호환: true일 경우 높은 우선순위로 preload
   onLoad?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
@@ -78,6 +79,7 @@ export default function Image({
   fill = false,
   sizes,
   placeholder = "empty", // 기본값: empty (Next.js Image 호환)
+  blurDataURL: customBlurDataURL, // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
   priority = false, // 기본값: false (Next.js Image 호환)
   className = "",
   style,
@@ -91,11 +93,13 @@ export default function Image({
   const {
     src: currentSrc,
     srcSet: currentSrcSet,
-    lqipSrc: currentLqip,
-    blurDataURL,
+    blurDataURL: srcBlurDataURL, // 번들러가 생성한 blurDataURL
     width: currentWidth,
     height: currentHeight,
   } = src;
+
+  // blurDataURL 우선순위: prop으로 제공된 것 > src 객체의 것
+  const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
 
   // 2. sizes 자동 계산: 제공되지 않으면 srcSet 기반으로 자동 생성
   const computedSizes =
@@ -116,8 +120,7 @@ export default function Image({
       return undefined;
     }
     if (placeholder === "blur") {
-      // blurDataURL 우선, 없으면 lqipSrc 사용 (하위 호환성)
-      return blurDataURL ?? currentLqip;
+      return blurDataURL;
     }
     // data:image/... 형식의 직접 제공된 placeholder
     if (placeholder.startsWith("data:image/")) {

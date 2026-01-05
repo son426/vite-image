@@ -40,15 +40,14 @@ export function viteImage(options?: ViteImagePluginOptions): PluginOption[] {
         return `
           import srcSet from "${basePath}?${srcSetParams}";
           import meta from "${basePath}?${metaParams}";
-          import lqipSrc from "${basePath}?${lqipParams}";
+          import blurDataURL from "${basePath}?${lqipParams}";
           
           export default {
             src: meta.src,
             width: meta.width,
             height: meta.height,
             srcSet: srcSet,
-            lqipSrc: lqipSrc, // Deprecated: 하위 호환성을 위해 유지
-            blurDataURL: lqipSrc // Next.js Image 호환성을 위한 blurDataURL
+            blurDataURL: blurDataURL
           };
         `;
       }

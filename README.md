@@ -210,7 +210,6 @@ interface ResponsiveImageData {
   width: number;
   height: number;
   srcSet?: string;
-  lqipSrc?: string; // Deprecated: use blurDataURL instead
   blurDataURL?: string; // Base64 encoded blur placeholder (Next.js Image compatible)
 }
 ```

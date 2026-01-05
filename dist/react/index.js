@@ -33,6 +33,8 @@ function Image({
   sizes,
   placeholder = "empty",
   // 기본값: empty (Next.js Image 호환)
+  blurDataURL: customBlurDataURL,
+  // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
   priority = false,
   // 기본값: false (Next.js Image 호환)
   className = "",
@@ -45,11 +47,12 @@ function Image({
   const {
     src: currentSrc,
     srcSet: currentSrcSet,
-    lqipSrc: currentLqip,
-    blurDataURL,
+    blurDataURL: srcBlurDataURL,
+    // 번들러가 생성한 blurDataURL
     width: currentWidth,
     height: currentHeight
   } = src;
+  const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
   const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
   if (priority && currentSrc) {
     preload(currentSrc, {
@@ -64,7 +67,7 @@ function Image({
       return void 0;
     }
     if (placeholder === "blur") {
-      return blurDataURL ?? currentLqip;
+      return blurDataURL;
     }
     if (placeholder.startsWith("data:image/")) {
       return placeholder;
