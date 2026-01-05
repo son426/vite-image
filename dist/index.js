@@ -24,7 +24,8 @@ function viteImage(options) {
             width: meta.width,
             height: meta.height,
             srcSet: srcSet,
-            lqipSrc: lqipSrc
+            lqipSrc: lqipSrc, // Deprecated: \uD558\uC704 \uD638\uD658\uC131\uC744 \uC704\uD574 \uC720\uC9C0
+            blurDataURL: lqipSrc // Next.js Image \uD638\uD658\uC131\uC744 \uC704\uD55C blurDataURL
           };
         `;
       }

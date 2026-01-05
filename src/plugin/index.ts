@@ -47,7 +47,8 @@ export function viteImage(options?: ViteImagePluginOptions): PluginOption[] {
             width: meta.width,
             height: meta.height,
             srcSet: srcSet,
-            lqipSrc: lqipSrc
+            lqipSrc: lqipSrc, // Deprecated: 하위 호환성을 위해 유지
+            blurDataURL: lqipSrc // Next.js Image 호환성을 위한 blurDataURL
           };
         `;
       }

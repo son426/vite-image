@@ -2,11 +2,36 @@ import { useState } from 'react';
 import { jsxs, jsx } from 'react/jsx-runtime';
 
 // src/react/Image.tsx
+function generateSizesFromSrcSet(srcSet) {
+  if (!srcSet) {
+    return "100vw";
+  }
+  const widthMatches = srcSet.match(/(\d+)w/g);
+  if (!widthMatches || widthMatches.length === 0) {
+    return "100vw";
+  }
+  const breakpoints = widthMatches.map((match) => parseInt(match.replace("w", ""), 10)).sort((a, b) => a - b);
+  if (breakpoints.length === 0) {
+    return "100vw";
+  }
+  const sizeParts = [];
+  for (let i = 0; i < breakpoints.length; i++) {
+    const breakpoint = breakpoints[i];
+    if (i === breakpoints.length - 1) {
+      sizeParts.push(`${breakpoint}px`);
+    } else {
+      sizeParts.push(`(max-width: ${breakpoint}px) 100vw`);
+    }
+  }
+  return sizeParts.join(", ");
+}
 function Image({
   src,
   // 이제 이 src는 객체입니다.
   fill = false,
-  sizes = "100vw",
+  sizes,
+  placeholder = "empty",
+  // 기본값: empty (Next.js Image 호환)
   className = "",
   style,
   ...props
@@ -16,9 +41,25 @@ function Image({
     src: currentSrc,
     srcSet: currentSrcSet,
     lqipSrc: currentLqip,
+    blurDataURL,
     width: currentWidth,
     height: currentHeight
   } = src;
+  const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
+  const getPlaceholderSrc = () => {
+    if (placeholder === "empty") {
+      return void 0;
+    }
+    if (placeholder === "blur") {
+      return blurDataURL ?? currentLqip;
+    }
+    if (placeholder.startsWith("data:image/")) {
+      return placeholder;
+    }
+    return void 0;
+  };
+  const placeholderSrc = getPlaceholderSrc();
+  const shouldShowPlaceholder = placeholderSrc && !isImageLoaded;
   const containerStyle = fill ? {
     position: "absolute",
     top: 0,
@@ -46,13 +87,16 @@ function Image({
     height: "100%",
     objectFit: "cover"
   };
-  const lqipStyle = {
+  const placeholderStyle = {
     ...imgStyle,
-    filter: "blur(20px)",
-    transform: "scale(1.1)",
     transition: "opacity 500ms ease-out",
     opacity: isImageLoaded ? 0 : 1,
-    zIndex: 1
+    zIndex: 1,
+    // blur placeholder일 때만 blur 효과 적용
+    ...placeholder === "blur" ? {
+      filter: "blur(20px)",
+      transform: "scale(1.1)"
+    } : {}
   };
   return /* @__PURE__ */ jsxs("div", { className, style: mergedContainerStyle, children: [
     /* @__PURE__ */ jsx(
@@ -61,14 +105,22 @@ function Image({
         ...props,
         src: currentSrc,
         srcSet: currentSrcSet,
-        sizes,
+        sizes: computedSizes,
         width: fill ? void 0 : currentWidth,
         height: fill ? void 0 : currentHeight,
         onLoad: () => setIsImageLoaded(true),
         style: { ...imgStyle, zIndex: 0 }
       }
     ),
-    currentLqip && /* @__PURE__ */ jsx("img", { src: currentLqip, alt: "", "aria-hidden": "true", style: lqipStyle })
+    shouldShowPlaceholder && /* @__PURE__ */ jsx(
+      "img",
+      {
+        src: placeholderSrc,
+        alt: "",
+        "aria-hidden": "true",
+        style: placeholderStyle
+      }
+    )
   ] });
 }
 

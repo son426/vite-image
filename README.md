@@ -5,7 +5,7 @@
 - **Bring the power of Next.js's automatic image optimization to your Vite projects.**
 - **Dedicated to the Vite + React ecosystem.**
 
-BSimply add the plugin to your config, and start using the `<Image />` component immediately. No complex setups, just performant images.
+Simply add the plugin to your config, and start using the `<Image />` component immediately. No complex setups, just performant images.
 
 ## ✨ Why use this?
 
@@ -86,14 +86,7 @@ import Image from "@son426/vite-image/react";
 import bgImage from "@/assets/image.webp?vite-image";
 
 function MyComponent() {
-  return (
-    <Image
-      src={bgImage}
-      fill={false}
-      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
-      alt="Description"
-    />
-  );
+  return <Image src={bgImage} fill={false} alt="Description" />;
 }
 ```
 
