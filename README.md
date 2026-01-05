@@ -1,18 +1,46 @@
 # @son426/vite-image
 
-**Next.js-style Image component for Vite.**
+**The Next.js `<Image />` experience, now in Vite.**
 
-This library provides a Next.js-like Image component experience in Vite. The core philosophy is to bring static bundler capabilities similar to Next.js Image component to Vite projects. Simply add `viteImage()` to your `vite.config.ts` and start using the `<Image />` component.
+- **Bring the power of Next.js's automatic image optimization to your Vite projects.**
+- **Dedicated to the Vite + React ecosystem.**
 
-## Features
+BSimply add the plugin to your config, and start using the `<Image />` component immediately. No complex setups, just performant images.
 
-- 🖼️ **Optimized Images**: Automatic image optimization using vite-imagetools
-- 🎨 **LQIP Support**: Low Quality Image Placeholder for smooth loading experience
-- 📱 **Responsive Images**: Built-in support for srcSet and sizes attributes
-- 🎯 **TypeScript**: Full TypeScript support with type definitions
-- 🚀 **Simple Setup**: Easy configuration with sensible defaults
+## ✨ Why use this?
+
+- **⚡ Next.js-like Experience**: Familiar Image API for those coming from Next.js.
+- **🖼️ Zero-Config Optimization**: Automatic format conversion, resizing, and compression via `vite-imagetools`.
+- **🎨 Built-in LQIP**: Automatic Low Quality Image Placeholders (blur effect) while loading.
+- **📱 Responsive Ready**: Auto-generated `srcSet` and `sizes` for all viewports.
+- **🎯 Type-Safe**: Full TypeScript support with tight integration.
+
+---
+
+## 🚀 Quick Look
+
+Add it to `vite.config.ts`, and use it like this:
+
+```tsx
+import Image from "@son426/vite-image/react";
+// 1. Import with the required query
+import myBg from "./assets/background.jpg?vite-image";
+
+export default function Page() {
+  return (
+    // 2. Pass the object directly to src
+    <Image
+      src={myBg}
+      alt="Optimized Background"
+      fill // Optional: Fill parent container
+    />
+  );
+}
+```
 
 ## Installation
+
+Since `vite-imagetools` is handled internally, you only need to install this package.
 
 ```bash
 pnpm add @son426/vite-image
@@ -22,13 +50,12 @@ npm install @son426/vite-image
 yarn add @son426/vite-image
 ```
 
-## Peer Dependencies
+## Requirements
 
-The following packages are required:
+Just a standard Vite + React project.
 
-```bash
-pnpm add react vite vite-imagetools
-```
+vite (>= 4.0.0)
+react (>= 18.0.0)
 
 ## Usage
 
@@ -47,8 +74,6 @@ export default defineConfig({
   ],
 });
 ```
-
-**Important**: The `viteImage()` function returns an array of plugins, so you should spread it when adding to the plugins array.
 
 ### 2. Use the Component
 
