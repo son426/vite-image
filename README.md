@@ -149,6 +149,17 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 <Image src={heroImage} alt="Hero" sizes="(max-width: 768px) 100vw, 50vw" />
 ```
 
+**With onLoad and onError callbacks:**
+
+```tsx
+<Image
+  src={heroImage}
+  alt="Hero"
+  onLoad={(e) => console.log("Image loaded", e)}
+  onError={(e) => console.error("Image failed to load", e)}
+/>
+```
+
 **Combined usage:**
 
 ```tsx
@@ -160,6 +171,7 @@ import heroImage from "@/assets/hero.jpg?vite-image";
     priority
     placeholder="blur"
     className="rounded-lg"
+    onLoad={(e) => console.log("Loaded")}
   />
 </div>
 ```
@@ -168,16 +180,18 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 
 ### Image Props
 
-| Prop          | Type                          | Required | Default   | Description                                                             |
-| ------------- | ----------------------------- | -------- | --------- | ----------------------------------------------------------------------- |
-| `src`         | `ResponsiveImageData`         | Yes      | -         | Image data object from `?vite-image` query                              |
-| `fill`        | `boolean`                     | No       | `false`   | Fill container mode (requires parent with `position: relative`)         |
-| `sizes`       | `string`                      | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
-| `priority`    | `boolean`                     | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
-| `placeholder` | `'empty' \| 'blur' \| string` | No       | `'empty'` | Placeholder type: `'empty'` (none), `'blur'` (blurDataURL), or data URL |
-| `className`   | `string`                      | No       | -         | Additional CSS classes                                                  |
-| `style`       | `CSSProperties`               | No       | -         | Additional inline styles                                                |
-| `...props`    | `ImgHTMLAttributes`           | No       | -         | All standard img element attributes                                     |
+| Prop          | Type                                                      | Required | Default   | Description                                                             |
+| ------------- | --------------------------------------------------------- | -------- | --------- | ----------------------------------------------------------------------- |
+| `src`         | `ResponsiveImageData`                                     | Yes      | -         | Image data object from `?vite-image` query                              |
+| `fill`        | `boolean`                                                 | No       | `false`   | Fill container mode (requires parent with `position: relative`)         |
+| `sizes`       | `string`                                                  | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
+| `priority`    | `boolean`                                                 | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
+| `placeholder` | `'empty' \| 'blur' \| string`                             | No       | `'empty'` | Placeholder type: `'empty'` (none), `'blur'` (blurDataURL), or data URL |
+| `onLoad`      | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image loads successfully                            |
+| `onError`     | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image fails to load                                 |
+| `className`   | `string`                                                  | No       | -         | Additional CSS classes                                                  |
+| `style`       | `CSSProperties`                                           | No       | -         | Additional inline styles                                                |
+| `...props`    | `ImgHTMLAttributes`                                       | No       | -         | All standard img element attributes                                     |
 
 **Notes**:
 
@@ -229,4 +243,3 @@ import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
 ## License
 
 MIT
-
