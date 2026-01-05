@@ -54,8 +54,9 @@ yarn add @son426/vite-image
 
 Just a standard Vite + React project.
 
-vite (>= 4.0.0)
-react (>= 18.0.0)
+- vite (>= 4.0.0)
+- react (>= 18.0.0)
+- react-dom (>= 18.0.0)
 
 ## Usage
 
@@ -96,16 +97,70 @@ The `?vite-image` query automatically generates:
 
 - `src`: Optimized image URL
 - `srcSet`: Responsive srcSet string
-- `lqipSrc`: Low Quality Image Placeholder (base64 inline)
+- `blurDataURL`: Low Quality Image Placeholder (base64 inline)
 - `width` and `height`: Image dimensions
 
-### Fill Mode
+#### Usage Examples
 
-For images that fill their container (similar to Next.js Image):
+**Basic usage:**
 
-```typescript
+```tsx
+import Image from "@son426/vite-image/react";
+import heroImage from "@/assets/hero.jpg?vite-image";
+
+<Image src={heroImage} alt="Hero" />;
+```
+
+**Fill mode (container-filling images):**
+
+```tsx
 <div style={{ position: "relative", width: "100%", height: "400px" }}>
-  <Image src={bgImage} fill={true} sizes="100vw" alt="Description" />
+  <Image src={bgImage} fill alt="Background" />
+</div>
+```
+
+**With priority (LCP images):**
+
+```tsx
+<Image src={heroImage} alt="Hero" priority />
+```
+
+**With blur placeholder:**
+
+```tsx
+<Image src={heroImage} alt="Hero" placeholder="blur" />
+```
+
+**Without placeholder:**
+
+```tsx
+<Image src={heroImage} alt="Hero" placeholder="empty" />
+```
+
+**Custom data URL placeholder:**
+
+```tsx
+<Image src={heroImage} alt="Hero" placeholder="data:image/jpeg;base64,..." />
+```
+
+**Custom sizes:**
+
+```tsx
+<Image src={heroImage} alt="Hero" sizes="(max-width: 768px) 100vw, 50vw" />
+```
+
+**Combined usage:**
+
+```tsx
+<div style={{ position: "relative", width: "100%", height: "600px" }}>
+  <Image
+    src={heroImage}
+    alt="Hero"
+    fill
+    priority
+    placeholder="blur"
+    className="rounded-lg"
+  />
 </div>
 ```
 
@@ -113,16 +168,23 @@ For images that fill their container (similar to Next.js Image):
 
 ### Image Props
 
-| Prop        | Type                  | Required | Description                                |
-| ----------- | --------------------- | -------- | ------------------------------------------ |
-| `src`       | `ResponsiveImageData` | Yes      | Image data object from `?vite-image` query |
-| `fill`      | `boolean`             | No       | Fill container mode (default: `false`)     |
-| `sizes`     | `string`              | No       | Sizes attribute (default: `"100vw"`)       |
-| `className` | `string`              | No       | Additional CSS classes                     |
-| `style`     | `CSSProperties`       | No       | Additional inline styles                   |
-| `...props`  | `ImgHTMLAttributes`   | No       | All standard img element attributes        |
+| Prop          | Type                          | Required | Default   | Description                                                             |
+| ------------- | ----------------------------- | -------- | --------- | ----------------------------------------------------------------------- |
+| `src`         | `ResponsiveImageData`         | Yes      | -         | Image data object from `?vite-image` query                              |
+| `fill`        | `boolean`                     | No       | `false`   | Fill container mode (requires parent with `position: relative`)         |
+| `sizes`       | `string`                      | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
+| `priority`    | `boolean`                     | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
+| `placeholder` | `'empty' \| 'blur' \| string` | No       | `'empty'` | Placeholder type: `'empty'` (none), `'blur'` (blurDataURL), or data URL |
+| `className`   | `string`                      | No       | -         | Additional CSS classes                                                  |
+| `style`       | `CSSProperties`               | No       | -         | Additional inline styles                                                |
+| `...props`    | `ImgHTMLAttributes`           | No       | -         | All standard img element attributes                                     |
 
-**Note**: The `src` prop must be an object imported from `?vite-image` query. String URLs are not supported. The `width` and `height` are automatically extracted from the `src` object.
+**Notes**:
+
+- The `src` prop must be an object imported from `?vite-image` query. String URLs are not supported.
+- The `width` and `height` are automatically extracted from the `src` object.
+- When `priority={true}`, the image is preloaded using `react-dom`'s `preload` API and loaded with `loading="eager"` and `fetchPriority="high"`.
+- When `sizes` is not provided, it's automatically calculated from `srcSet` breakpoints.
 
 ### ResponsiveImageData
 
@@ -134,7 +196,8 @@ interface ResponsiveImageData {
   width: number;
   height: number;
   srcSet?: string;
-  lqipSrc?: string;
+  lqipSrc?: string; // Deprecated: use blurDataURL instead
+  blurDataURL?: string; // Base64 encoded blur placeholder (Next.js Image compatible)
 }
 ```
 
@@ -153,10 +216,12 @@ import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
 
    - Responsive srcSet (640px, 1024px, 1920px widths)
    - Image metadata (1920px width)
-   - LQIP (20px width, blurred, low quality, inline base64)
+   - Blur placeholder (20px width, blurred, low quality, inline base64 as `blurDataURL`)
 
 2. **Image Component**: The `<Image />` component handles:
-   - LQIP display while the main image loads
+   - Automatic `sizes` calculation from `srcSet` breakpoints
+   - Placeholder display (`blur`, `empty`, or custom data URL)
+   - Priority loading with `react-dom`'s `preload` API when `priority={true}`
    - Responsive image loading with srcSet
    - Proper aspect ratio maintenance
    - Fill mode for container-filling images
@@ -164,3 +229,4 @@ import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
 ## License
 
 MIT
+

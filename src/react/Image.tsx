@@ -1,4 +1,5 @@
 import { useState, type ImgHTMLAttributes, type CSSProperties } from "react";
+import { preload } from "react-dom";
 import type { ResponsiveImageData } from "../types";
 
 // placeholder 타입 정의 (Next.js Image 호환)
@@ -14,6 +15,9 @@ interface BaseImageProps
   src: ResponsiveImageData;
   sizes?: string; // Optional: 제공되지 않으면 자동 계산
   placeholder?: PlaceholderValue; // Next.js Image 호환: 'empty' | 'blur' | 'data:image/...'
+  priority?: boolean; // Next.js Image 호환: true일 경우 높은 우선순위로 preload
+  onLoad?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
 
 interface FillImageProps extends BaseImageProps {
@@ -74,8 +78,11 @@ export default function Image({
   fill = false,
   sizes,
   placeholder = "empty", // 기본값: empty (Next.js Image 호환)
+  priority = false, // 기본값: false (Next.js Image 호환)
   className = "",
   style,
+  onLoad,
+  onError,
   ...props
 }: ImageProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -93,6 +100,15 @@ export default function Image({
   // 2. sizes 자동 계산: 제공되지 않으면 srcSet 기반으로 자동 생성
   const computedSizes =
     sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
+
+  if (priority && currentSrc) {
+    preload(currentSrc, {
+      as: "image",
+      fetchPriority: "high",
+      ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
+      ...(computedSizes ? { imageSizes: computedSizes } : {}),
+    });
+  }
 
   // 3. placeholder 처리 (Next.js Image 호환)
   const getPlaceholderSrc = (): string | undefined => {
@@ -112,9 +128,9 @@ export default function Image({
   };
 
   const placeholderSrc = getPlaceholderSrc();
-  const shouldShowPlaceholder = placeholderSrc && !isImageLoaded;
+  const hasShowPlaceholder = !!placeholderSrc;
 
-  // 4. 컨테이너 스타일 계산 (기존 로직 유지)
+  // 5. 컨테이너 스타일 계산 (기존 로직 유지)
   const containerStyle: CSSProperties = fill
     ? {
         position: "absolute",
@@ -138,7 +154,7 @@ export default function Image({
 
   const mergedContainerStyle = { ...containerStyle, ...style };
 
-  // 5. 실제 이미지 스타일 (기존 로직 유지)
+  // 6. 실제 이미지 스타일 (기존 로직 유지)
   const imgStyle: CSSProperties = {
     position: "absolute",
     top: 0,
@@ -150,12 +166,14 @@ export default function Image({
     objectFit: "cover",
   };
 
-  // 6. Placeholder 스타일 (blur 모드일 때만 blur 효과 적용)
+  // 7. Placeholder 스타일 (blur 모드일 때만 blur 효과 적용)
   const placeholderStyle: CSSProperties = {
     ...imgStyle,
     transition: "opacity 500ms ease-out",
     opacity: isImageLoaded ? 0 : 1,
     zIndex: 1,
+    pointerEvents: "none",
+
     // blur placeholder일 때만 blur 효과 적용
     ...(placeholder === "blur"
       ? {
@@ -175,12 +193,18 @@ export default function Image({
         sizes={computedSizes}
         width={fill ? undefined : currentWidth}
         height={fill ? undefined : currentHeight}
-        onLoad={() => setIsImageLoaded(true)}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
+        onLoad={(e) => {
+          setIsImageLoaded(true);
+          onLoad?.(e);
+        }}
+        onError={onError}
         style={{ ...imgStyle, zIndex: 0 }}
       />
 
       {/* Placeholder 레이어 (placeholder prop에 따라 표시) */}
-      {shouldShowPlaceholder && (
+      {hasShowPlaceholder && (
         <img
           src={placeholderSrc}
           alt=""

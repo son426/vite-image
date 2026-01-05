@@ -1,4 +1,5 @@
 import 'react';
+import 'react-dom';
 import 'react/jsx-runtime';
 import { imagetools } from 'vite-imagetools';
 

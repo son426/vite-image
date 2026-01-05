@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { preload } from 'react-dom';
 import { jsxs, jsx } from 'react/jsx-runtime';
 
 // src/react/Image.tsx
@@ -32,8 +33,12 @@ function Image({
   sizes,
   placeholder = "empty",
   // 기본값: empty (Next.js Image 호환)
+  priority = false,
+  // 기본값: false (Next.js Image 호환)
   className = "",
   style,
+  onLoad,
+  onError,
   ...props
 }) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -46,6 +51,14 @@ function Image({
     height: currentHeight
   } = src;
   const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
+  if (priority && currentSrc) {
+    preload(currentSrc, {
+      as: "image",
+      fetchPriority: "high",
+      ...currentSrcSet ? { imageSrcSet: currentSrcSet } : {},
+      ...computedSizes ? { imageSizes: computedSizes } : {}
+    });
+  }
   const getPlaceholderSrc = () => {
     if (placeholder === "empty") {
       return void 0;
@@ -59,7 +72,7 @@ function Image({
     return void 0;
   };
   const placeholderSrc = getPlaceholderSrc();
-  const shouldShowPlaceholder = placeholderSrc && !isImageLoaded;
+  const hasShowPlaceholder = !!placeholderSrc;
   const containerStyle = fill ? {
     position: "absolute",
     top: 0,
@@ -92,6 +105,7 @@ function Image({
     transition: "opacity 500ms ease-out",
     opacity: isImageLoaded ? 0 : 1,
     zIndex: 1,
+    pointerEvents: "none",
     // blur placeholder일 때만 blur 효과 적용
     ...placeholder === "blur" ? {
       filter: "blur(20px)",
@@ -108,11 +122,17 @@ function Image({
         sizes: computedSizes,
         width: fill ? void 0 : currentWidth,
         height: fill ? void 0 : currentHeight,
-        onLoad: () => setIsImageLoaded(true),
+        loading: priority ? "eager" : "lazy",
+        fetchPriority: priority ? "high" : void 0,
+        onLoad: (e) => {
+          setIsImageLoaded(true);
+          onLoad?.(e);
+        },
+        onError,
         style: { ...imgStyle, zIndex: 0 }
       }
     ),
-    shouldShowPlaceholder && /* @__PURE__ */ jsx(
+    hasShowPlaceholder && /* @__PURE__ */ jsx(
       "img",
       {
         src: placeholderSrc,

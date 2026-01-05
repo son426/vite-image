@@ -19,3 +19,4 @@ export default defineConfig({
   // types.d.ts는 빌드에서 제외
   onSuccess: "echo 'Build complete'",
 });
+
