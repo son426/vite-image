@@ -35,6 +35,8 @@ function Image({
   // 기본값: empty (Next.js Image 호환)
   blurDataURL: customBlurDataURL,
   // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
+  loading,
+  // loading prop (priority보다 낮은 우선순위)
   priority = false,
   // 기본값: false (Next.js Image 호환)
   className = "",
@@ -53,6 +55,7 @@ function Image({
     height: currentHeight
   } = src;
   const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
+  const loadingAttr = priority ? "eager" : loading ?? "lazy";
   const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
   if (priority && currentSrc) {
     preload(currentSrc, {
@@ -125,7 +128,7 @@ function Image({
         sizes: computedSizes,
         width: fill ? void 0 : currentWidth,
         height: fill ? void 0 : currentHeight,
-        loading: priority ? "eager" : "lazy",
+        loading: loadingAttr,
         fetchPriority: priority ? "high" : void 0,
         onLoad: (e) => {
           setIsImageLoaded(true);
