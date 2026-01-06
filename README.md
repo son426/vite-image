@@ -32,7 +32,12 @@ export default function Page() {
     <Image
       src={myBg}
       alt="Optimized Background"
-      fill // Optional: Fill parent container
+      fill
+      priority
+      placeholder="blur"
+      className="rounded-lg"
+      onLoad={(e) => {}}
+      onError={(e) => {}}
     />
   );
 }
