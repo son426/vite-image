@@ -19,7 +19,7 @@ export interface AutoApplyConfig {
 }
 
 // ViteImagePluginOptions는 plugin/index.ts에서 정의되므로 여기서는 타입만 참조
-export type ViteImagePluginOptions = Parameters<
+type ViteImagePluginOptions = Parameters<
   typeof import("vite-imagetools").imagetools
 >[0];
 

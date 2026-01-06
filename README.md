@@ -67,6 +67,31 @@ Just a standard Vite + React project.
 - react (>= 18.0.0)
 - react-dom (>= 18.0.0)
 
+## TypeScript Setup
+
+**⚠️ Temporary Setup Required**: Currently, you need to add type declarations manually. This will be automated in a future update.
+
+Add the following to your project's type definition file (e.g., `src/vite-env.d.ts`):
+
+```typescript
+/// <reference types="vite/client" />
+
+interface ResponsiveImageData {
+  src: string;
+  width: number;
+  height: number;
+  srcSet?: string;
+  blurDataURL?: string;
+}
+
+declare module "*?vite-image" {
+  const content: ResponsiveImageData;
+  export default content;
+}
+```
+
+This ensures TypeScript recognizes `?vite-image` imports. Sorry for the temporary manual step—we're working on automating this.
+
 ## Usage
 
 ### 1. Setup Vite Plugin
@@ -159,12 +184,29 @@ viteImage({
   },
 });
 
+// Add type declarations for autoApply extensions
+// In your project's vite-env.d.ts or a custom .d.ts file:
+// (Make sure you've already added the ResponsiveImageData interface from the TypeScript Setup section above)
+
+declare module "*.jpg" {
+  const imageData: ResponsiveImageData;
+  export default imageData;
+}
+
+declare module "*.png" {
+  const imageData: ResponsiveImageData;
+  export default imageData;
+}
+
 // Component
 import bgImage from "@/assets/background.jpg"; // No query needed
 <Image src={bgImage} alt="Background" />;
 ```
 
-**Important**: The `src` prop must receive the imported object directly. String URLs are not supported.
+**Important**:
+
+- The `src` prop must receive the imported object directly. String URLs are not supported.
+- When using `autoApply`, you need to add type declarations for the extensions you're using in your project's type definition file (e.g., `vite-env.d.ts`).
 
 The `?vite-image` query (or autoApply) automatically generates:
 
@@ -293,8 +335,10 @@ Type definitions are included. The package also extends vite-imagetools types fo
 
 ```typescript
 import Image from "@son426/vite-image/react";
-import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
+import type { ImageProps } from "@son426/vite-image/react";
 ```
+
+**Note**: After setting up the type declarations in the "TypeScript Setup" section above, you can use `ResponsiveImageData` directly in your code without importing it.
 
 ## How It Works
 
