@@ -323,7 +323,6 @@ interface ViteImageConfig {
 
 **구현할 Props**:
 
-- `loading`: `'lazy' | 'eager'` (현재 priority에 묶여있음)
 - `onLoadingComplete`: 로딩 완료 콜백 (naturalWidth, naturalHeight 포함)
 - `objectFit`: CSS object-fit 값
 - `objectPosition`: CSS object-position 값

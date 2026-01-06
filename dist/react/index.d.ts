@@ -1,16 +1,7 @@
 import * as react_jsx_runtime from 'react/jsx-runtime';
 import { ImgHTMLAttributes } from 'react';
-
-/**
- * Type definitions for vite-image
- */
-interface ResponsiveImageData {
-    src: string;
-    width: number;
-    height: number;
-    srcSet?: string;
-    blurDataURL?: string;
-}
+import { R as ResponsiveImageData } from '../types-B08JIQxT.js';
+import 'vite-imagetools';
 
 type PlaceholderValue = "empty" | "blur" | `data:image/${string}`;
 interface BaseImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "srcSet" | "width" | "height"> {
@@ -37,4 +28,4 @@ loading, // loading prop (priority보다 낮은 우선순위)
 priority, // 기본값: false (Next.js Image 호환)
 className, style, onLoad, onError, ...props }: ImageProps): react_jsx_runtime.JSX.Element;
 
-export { type ImageProps, type ResponsiveImageData, Image as default };
+export { type ImageProps, ResponsiveImageData, Image as default };
