@@ -22,22 +22,26 @@ Simply add the plugin to your config, and start using the `<Image />` component 
 Add it to `vite.config.ts`, and use it like this:
 
 ```tsx
+// vite.config.ts
+viteImage({
+  autoApply: {
+    extensions: [".jpg", ".png", ".webp"],
+    include: ["src/assets/**"],
+  },
+});
+
+// Component
 import Image from "@son426/vite-image/react";
-// 1. Import with the required query
-import myBg from "./assets/background.jpg?vite-image";
+import myBg from "./assets/background.jpg"; // No query needed
 
 export default function Page() {
   return (
-    // 2. Pass the object directly to src
     <Image
       src={myBg}
       alt="Optimized Background"
       fill
       priority
       placeholder="blur"
-      className="rounded-lg"
-      onLoad={(e) => {}}
-      onError={(e) => {}}
     />
   );
 }
@@ -45,7 +49,7 @@ export default function Page() {
 
 ## Installation
 
-Since `vite-imagetools` is handled internally, you only need to install this package.
+Install the package. `vite-imagetools` and `@rollup/pluginutils` are included as dependencies.
 
 ```bash
 pnpm add @son426/vite-image
@@ -75,17 +79,65 @@ import { viteImage } from "@son426/vite-image/plugin";
 
 export default defineConfig({
   plugins: [
-    // ... other plugins
-    viteImage(),
+    viteImage(), // Default: breakpoints [640, 1024, 1920], no autoApply
   ],
+});
+```
+
+**Default configuration:**
+
+- `breakpoints: [640, 1024, 1920]`
+- `autoApply: undefined` (requires `?vite-image` query)
+
+#### Configuration Options
+
+**Custom breakpoints:**
+
+```typescript
+viteImage({
+  breakpoints: [800, 1200, 1920],
+});
+```
+
+**Auto-apply without query string:**
+
+```typescript
+viteImage({
+  autoApply: {
+    extensions: [".jpg", ".png", ".webp"],
+    include: ["src/assets/**"],
+    exclude: ["src/icons/**"],
+  },
+});
+```
+
+**Note**: `include` and `exclude` patterns are matched against actual image file paths (after alias resolution). For example, `@/assets/image.jpg` resolves to `src/assets/image.jpg`.
+
+**With vite-imagetools options:**
+
+```typescript
+viteImage({
+  breakpoints: [640, 1024, 1920],
+  autoApply: {
+    extensions: [".jpg", ".png"],
+    include: ["src/**"],
+  },
+  imagetools: {
+    // vite-imagetools options
+    defaultDirectives: (url) => {
+      if (url.searchParams.has("vite-image")) {
+        return new URLSearchParams("format=webp");
+      }
+    },
+  },
 });
 ```
 
 ### 2. Use the Component
 
-#### Using `?vite-image` query (Required)
+#### Using `?vite-image` query
 
-The `?vite-image` query parameter is required and automatically generates all required image data. When using `?vite-image`, the `src` prop must be an object (not a string).
+The `?vite-image` query parameter automatically generates all required image data. When using `?vite-image`, the `src` prop must be an object (not a string).
 
 ```typescript
 import Image from "@son426/vite-image/react";
@@ -96,9 +148,25 @@ function MyComponent() {
 }
 ```
 
-**Important**: When using `?vite-image`, the `src` prop must receive the imported object directly. String URLs are not supported for `?vite-image` imports.
+**Without query string (autoApply enabled):**
 
-The `?vite-image` query automatically generates:
+```typescript
+// vite.config.ts
+viteImage({
+  autoApply: {
+    extensions: [".jpg", ".png"],
+    include: ["src/assets/**"],
+  },
+});
+
+// Component
+import bgImage from "@/assets/background.jpg"; // No query needed
+<Image src={bgImage} alt="Background" />;
+```
+
+**Important**: The `src` prop must receive the imported object directly. String URLs are not supported.
+
+The `?vite-image` query (or autoApply) automatically generates:
 
 - `src`: Optimized image URL
 - `srcSet`: Responsive srcSet string
@@ -187,7 +255,7 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 
 | Prop          | Type                                                      | Required | Default   | Description                                                             |
 | ------------- | --------------------------------------------------------- | -------- | --------- | ----------------------------------------------------------------------- |
-| `src`         | `ResponsiveImageData`                                     | Yes      | -         | Image data object from `?vite-image` query                              |
+| `src`         | `ResponsiveImageData`                                     | Yes      | -         | Image data object from `?vite-image` query or `autoApply`               |
 | `fill`        | `boolean`                                                 | No       | `false`   | Fill container mode (requires parent with `position: relative`)         |
 | `sizes`       | `string`                                                  | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
 | `priority`    | `boolean`                                                 | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
@@ -200,14 +268,14 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 
 **Notes**:
 
-- The `src` prop must be an object imported from `?vite-image` query. String URLs are not supported.
+- The `src` prop must be an object imported from `?vite-image` query or via `autoApply`. String URLs are not supported.
 - The `width` and `height` are automatically extracted from the `src` object.
 - When `priority={true}`, the image is preloaded using `react-dom`'s `preload` API and loaded with `loading="eager"` and `fetchPriority="high"`.
 - When `sizes` is not provided, it's automatically calculated from `srcSet` breakpoints.
 
 ### ResponsiveImageData
 
-The type returned from `?vite-image` query:
+The type returned from `?vite-image` query or `autoApply`:
 
 ```typescript
 interface ResponsiveImageData {
@@ -230,10 +298,10 @@ import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
 
 ## How It Works
 
-1. **`?vite-image` Query**: When you import an image with `?vite-image`, the plugin automatically generates:
+1. **Image Processing**: When you import an image with `?vite-image` query or via `autoApply`, the plugin automatically generates:
 
-   - Responsive srcSet (640px, 1024px, 1920px widths)
-   - Image metadata (1920px width)
+   - Responsive srcSet (default: 640px, 1024px, 1920px widths, customizable via `breakpoints`)
+   - Image metadata (largest breakpoint width)
    - Blur placeholder (20px width, blurred, low quality, inline base64 as `blurDataURL`)
 
 2. **Image Component**: The `<Image />` component handles:
@@ -247,5 +315,3 @@ import type { ImageProps, ResponsiveImageData } from "@son426/vite-image/react";
 ## License
 
 MIT
-
-
