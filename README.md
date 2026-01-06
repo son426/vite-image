@@ -21,13 +21,51 @@ Simply add the plugin to your config, and start using the `<Image />` component 
 
 Add it to `vite.config.ts`, and use it like this:
 
+**Option 1: Using query string (default)**
+
 ```tsx
 // vite.config.ts
-viteImage({
-  autoApply: {
-    extensions: [".jpg", ".png", ".webp"],
-    include: ["src/assets/**"],
-  },
+import { defineConfig } from "vite";
+import { viteImage } from "@son426/vite-image/plugin";
+
+export default defineConfig({
+  plugins: [
+    viteImage(), // Default breakpoints: [640, 1024, 1920]
+  ],
+});
+
+// Component
+import Image from "@son426/vite-image/react";
+import myBg from "./assets/background.jpg?vite-image";
+
+export default function Page() {
+  return (
+    <Image
+      src={myBg}
+      alt="Optimized Background"
+      fill
+      priority
+      placeholder="blur"
+    />
+  );
+}
+```
+
+**Option 2: Auto-apply without query string**
+
+```tsx
+// vite.config.ts
+import { defineConfig } from "vite";
+import { viteImage } from "@son426/vite-image/plugin";
+
+export default defineConfig({
+  plugins: [
+    viteImage({
+      autoApply: {
+        extensions: [".jpg"],
+      },
+    }),
+  ],
 });
 
 // Component
@@ -46,6 +84,8 @@ export default function Page() {
   );
 }
 ```
+
+> **Note**: For auto-apply, you'll need to add type declarations. See the [TypeScript Setup](#typescript-setup) section below.
 
 ## Installation
 
