@@ -1,3 +1,5 @@
+// tsup.config.ts
+
 import { defineConfig } from "tsup";
 
 export default defineConfig({
@@ -9,17 +11,12 @@ export default defineConfig({
   format: ["esm"],
   dts: {
     resolve: true,
-    // types.d.ts는 빌드에서 제외되도록 entry에서 제외
   },
   splitting: false,
   sourcemap: true,
   clean: true,
   treeshake: true,
   external: ["react", "react-dom", "vite", "vite-imagetools"],
-  // types.d.ts는 빌드에서 제외
   onSuccess: "echo 'Build complete'",
 });
-
-
-
 

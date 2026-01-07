@@ -18,10 +18,7 @@
     "isolatedModules": true,
     "noEmit": false
   },
-  "include": ["src/**/*", "types.d.ts"],
+  "include": ["src/**/*", "client.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
-
-
-
 

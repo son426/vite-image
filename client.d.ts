@@ -1,3 +1,4 @@
+// client.d.ts
 /// <reference types="vite/client" />
 
 /**
@@ -5,7 +6,13 @@
  * These types extend the default vite-imagetools types
  */
 
-import type { ResponsiveImageData } from "./types";
+interface ResponsiveImageData {
+  src: string;
+  width: number;
+  height: number;
+  srcSet?: string;
+  blurDataURL?: string; // Base64 encoded blur placeholder (Next.js Image compatible)
+}
 
 // vite-image 쿼리 파라미터 타입
 declare module "*?vite-image" {

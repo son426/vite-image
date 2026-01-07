@@ -1,3 +1,5 @@
+// src/plugin/index.ts
+
 import type { PluginOption } from "vite";
 import { imagetools } from "vite-imagetools";
 import { createFilter } from "@rollup/pluginutils";
