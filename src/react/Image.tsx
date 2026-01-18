@@ -18,6 +18,7 @@ interface BaseImageProps
   blurDataURL?: string; // Optional: 커스텀 blur placeholder (src.blurDataURL보다 우선)
   loading?: "lazy" | "eager"; // Next.js Image 호환: 이미지 로딩 방식
   priority?: boolean; // Next.js Image 호환: true일 경우 높은 우선순위로 preload
+  decoding?: "async" | "sync" | "auto"; // Next.js Image 호환: 이미지 디코딩 방식
   onLoad?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
@@ -83,6 +84,7 @@ export default function Image({
   blurDataURL: customBlurDataURL, // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
   loading, // loading prop (priority보다 낮은 우선순위)
   priority = false, // 기본값: false (Next.js Image 호환)
+  decoding = "async", // 기본값: async (Next.js Image 호환)
   className = "",
   style,
   onLoad,
@@ -204,6 +206,7 @@ export default function Image({
         height={fill ? undefined : currentHeight}
         loading={loadingAttr}
         fetchPriority={priority ? "high" : undefined}
+        decoding={decoding}
         onLoad={(e) => {
           setIsImageLoaded(true);
           onLoad?.(e);

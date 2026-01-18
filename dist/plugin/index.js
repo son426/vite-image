@@ -14,17 +14,20 @@ function matchesExtension(id, extensions) {
   if (!ext) return false;
   return extensions.includes(ext);
 }
-function generateSrcSetParams(breakpoints) {
-  return `w=${breakpoints.join(";")}&format=webp&as=srcset`;
+function generateSrcSetParams(breakpoints, quality) {
+  const qualityParam = quality ? `&quality=${quality}` : "";
+  return `w=${breakpoints.join(";")}&format=webp${qualityParam}&as=srcset`;
 }
-function generateMetaParams(breakpoints) {
+function generateMetaParams(breakpoints, quality) {
   const maxWidth = Math.max(...breakpoints);
-  return `w=${maxWidth}&format=webp&as=meta`;
+  const qualityParam = quality ? `&quality=${quality}` : "";
+  return `w=${maxWidth}&format=webp${qualityParam}&as=meta`;
 }
-function generateImageCode(basePath, breakpoints) {
-  const srcSetParams = generateSrcSetParams(breakpoints);
-  const metaParams = generateMetaParams(breakpoints);
-  const lqipParams = "w=20&blur=2&quality=20&format=webp&inline";
+function generateImageCode(basePath, breakpoints, quality) {
+  const srcSetParams = generateSrcSetParams(breakpoints, quality);
+  const metaParams = generateMetaParams(breakpoints, quality);
+  const blurQuality = quality ?? 20;
+  const lqipParams = `w=20&blur=2&quality=${blurQuality}&format=webp&inline`;
   return `
     import meta from "${basePath}?${metaParams}";
     import srcSet from "${basePath}?${srcSetParams}";
@@ -64,7 +67,8 @@ function viteImage(config) {
       const [basePath, search] = id.split("?");
       const params = new URLSearchParams(search);
       if (params.has("vite-image")) {
-        return generateImageCode(basePath, breakpoints);
+        const quality = params.get("quality") ? parseInt(params.get("quality"), 10) : void 0;
+        return generateImageCode(basePath, breakpoints, quality);
       }
       if (shouldAutoApply(id, autoApply, filter)) {
         return generateImageCode(basePath, breakpoints);

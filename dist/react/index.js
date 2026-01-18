@@ -39,6 +39,10 @@ function Image({
   // loading prop (priority보다 낮은 우선순위)
   priority = false,
   // 기본값: false (Next.js Image 호환)
+  quality,
+  // Next.js Image 호환: 이미지 품질 (향후 plugin 레벨에서 처리)
+  decoding = "async",
+  // 기본값: async (Next.js Image 호환)
   className = "",
   style,
   onLoad,
@@ -130,6 +134,7 @@ function Image({
         height: fill ? void 0 : currentHeight,
         loading: loadingAttr,
         fetchPriority: priority ? "high" : void 0,
+        decoding,
         onLoad: (e) => {
           setIsImageLoaded(true);
           onLoad?.(e);

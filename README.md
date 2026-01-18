@@ -392,3 +392,4 @@ import type { ImageProps } from "@son426/vite-image/react";
 ## License
 
 MIT
+

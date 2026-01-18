@@ -11,6 +11,8 @@ interface BaseImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src"
     blurDataURL?: string;
     loading?: "lazy" | "eager";
     priority?: boolean;
+    quality?: number;
+    decoding?: "async" | "sync" | "auto";
     onLoad?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
     onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
 }
@@ -26,6 +28,8 @@ fill, sizes, placeholder, // 기본값: empty (Next.js Image 호환)
 blurDataURL: customBlurDataURL, // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
 loading, // loading prop (priority보다 낮은 우선순위)
 priority, // 기본값: false (Next.js Image 호환)
+quality, // Next.js Image 호환: 이미지 품질 (향후 plugin 레벨에서 처리)
+decoding, // 기본값: async (Next.js Image 호환)
 className, style, onLoad, onError, ...props }: ImageProps): react_jsx_runtime.JSX.Element;
 
 export { type ImageProps, ResponsiveImageData, Image as default };
