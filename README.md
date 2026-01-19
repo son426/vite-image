@@ -308,6 +308,24 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 />
 ```
 
+**With decoding:**
+
+```tsx
+<Image src={heroImage} alt="Hero" decoding="sync" />
+```
+
+**With overrideSrc (SEO optimization):**
+
+```tsx
+<Image
+  src={heroImage}
+  alt="Hero"
+  overrideSrc="/original-image.jpg"
+/>
+```
+
+> **Note**: When `overrideSrc` is provided, the `src` attribute uses the override value for SEO purposes, while the optimized `srcSet` is disabled. Placeholders are also disabled when using `overrideSrc`.
+
 **Combined usage:**
 
 ```tsx
@@ -335,6 +353,8 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 | `sizes`       | `string`                                                  | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
 | `priority`    | `boolean`                                                 | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
 | `placeholder` | `'empty' \| 'blur' \| string`                             | No       | `'empty'` | Placeholder type: `'empty'` (none), `'blur'` (blurDataURL), or data URL |
+| `decoding`    | `'async' \| 'sync' \| 'auto'`                              | No       | `'async'` | Image decoding strategy (Next.js Image compatible)                      |
+| `overrideSrc` | `string`                                                   | No       | -         | Override src attribute for SEO while using optimized images            |
 | `onLoad`      | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image loads successfully                            |
 | `onError`     | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image fails to load                                 |
 | `className`   | `string`                                                  | No       | -         | Additional CSS classes                                                  |
@@ -347,6 +367,8 @@ import heroImage from "@/assets/hero.jpg?vite-image";
 - The `width` and `height` are automatically extracted from the `src` object.
 - When `priority={true}`, the image is preloaded using `react-dom`'s `preload` API and loaded with `loading="eager"` and `fetchPriority="high"`.
 - When `sizes` is not provided, it's automatically calculated from `srcSet` breakpoints.
+- When `overrideSrc` is provided, the `src` attribute uses the override value (useful for SEO), while `srcSet` and `sizes` are disabled. Placeholders are also disabled.
+- The `decoding` prop controls how the browser decodes the image: `"async"` (default, non-blocking), `"sync"` (blocking), or `"auto"` (browser decides).
 
 ### ResponsiveImageData
 
