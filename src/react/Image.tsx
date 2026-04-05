@@ -1,4 +1,10 @@
-import { useState, type ImgHTMLAttributes, type CSSProperties } from "react";
+import {
+  useState,
+  useEffect,
+
+  type ImgHTMLAttributes,
+  type CSSProperties,
+} from "react";
 import { preload } from "react-dom";
 import type { ResponsiveImageData } from "../types";
 
@@ -94,6 +100,7 @@ export default function Image({
   ...props
 }: ImageProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isPlaceholderRemoved, setIsPlaceholderRemoved] = useState(false);
 
   // 1. 데이터 추출: src 객체에서 바로 꺼내씀 (병합 로직 제거)
   const {
@@ -117,15 +124,17 @@ export default function Image({
   const computedSizes =
     sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
 
-  // 5. Priority 처리: priority={true}일 때 preload
-  if (priority && currentSrc) {
-    preload(currentSrc, {
-      as: "image",
-      fetchPriority: "high",
-      ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
-      ...(computedSizes ? { imageSizes: computedSizes } : {}),
-    });
-  }
+  // 5. Priority 처리: priority={true}일 때 preload (마운트 시 1회만)
+  useEffect(() => {
+    if (priority && currentSrc) {
+      preload(currentSrc, {
+        as: "image",
+        fetchPriority: "high",
+        ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
+        ...(computedSizes ? { imageSizes: computedSizes } : {}),
+      });
+    }
+  }, [priority, currentSrc, currentSrcSet, computedSizes]);
 
   // 6. placeholder 처리 (Next.js Image 호환) - overrideSrc가 있으면 placeholder 비활성화
   const getPlaceholderSrc = (): string | undefined => {
@@ -224,13 +233,18 @@ export default function Image({
         style={{ ...imgStyle, zIndex: 0 }}
       />
 
-      {/* Placeholder 레이어 (overrideSrc가 없을 때만 표시) */}
-      {!overrideSrc && hasShowPlaceholder && (
+      {/* Placeholder 레이어 (overrideSrc가 없을 때만 표시, 트랜지션 후 DOM에서 제거) */}
+      {!overrideSrc && hasShowPlaceholder && !isPlaceholderRemoved && (
         <img
           src={placeholderSrc}
           alt=""
           aria-hidden="true"
           style={placeholderStyle}
+          onTransitionEnd={() => {
+            if (isImageLoaded) {
+              setIsPlaceholderRemoved(true);
+            }
+          }}
         />
       )}
     </div>

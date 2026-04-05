@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { preload } from 'react-dom';
 import { jsxs, jsx } from 'react/jsx-runtime';
 
@@ -39,10 +39,10 @@ function Image({
   // loading prop (priority보다 낮은 우선순위)
   priority = false,
   // 기본값: false (Next.js Image 호환)
-  quality,
-  // Next.js Image 호환: 이미지 품질 (향후 plugin 레벨에서 처리)
   decoding = "async",
   // 기본값: async (Next.js Image 호환)
+  overrideSrc,
+  // Next.js Image 호환: SEO를 위해 src 속성을 유지하면서 최적화된 이미지 사용
   className = "",
   style,
   onLoad,
@@ -50,6 +50,7 @@ function Image({
   ...props
 }) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isPlaceholderRemoved, setIsPlaceholderRemoved] = useState(false);
   const {
     src: currentSrc,
     srcSet: currentSrcSet,
@@ -60,16 +61,22 @@ function Image({
   } = src;
   const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
   const loadingAttr = priority ? "eager" : loading ?? "lazy";
+  const finalSrc = overrideSrc ?? currentSrc;
   const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
-  if (priority && currentSrc) {
-    preload(currentSrc, {
-      as: "image",
-      fetchPriority: "high",
-      ...currentSrcSet ? { imageSrcSet: currentSrcSet } : {},
-      ...computedSizes ? { imageSizes: computedSizes } : {}
-    });
-  }
+  useEffect(() => {
+    if (priority && currentSrc) {
+      preload(currentSrc, {
+        as: "image",
+        fetchPriority: "high",
+        ...currentSrcSet ? { imageSrcSet: currentSrcSet } : {},
+        ...computedSizes ? { imageSizes: computedSizes } : {}
+      });
+    }
+  }, [priority, currentSrc, currentSrcSet, computedSizes]);
   const getPlaceholderSrc = () => {
+    if (overrideSrc) {
+      return void 0;
+    }
     if (placeholder === "empty") {
       return void 0;
     }
@@ -127,9 +134,9 @@ function Image({
       "img",
       {
         ...props,
-        src: currentSrc,
-        srcSet: currentSrcSet,
-        sizes: computedSizes,
+        src: finalSrc,
+        srcSet: overrideSrc ? void 0 : currentSrcSet,
+        sizes: overrideSrc ? void 0 : computedSizes,
         width: fill ? void 0 : currentWidth,
         height: fill ? void 0 : currentHeight,
         loading: loadingAttr,
@@ -143,13 +150,18 @@ function Image({
         style: { ...imgStyle, zIndex: 0 }
       }
     ),
-    hasShowPlaceholder && /* @__PURE__ */ jsx(
+    !overrideSrc && hasShowPlaceholder && !isPlaceholderRemoved && /* @__PURE__ */ jsx(
       "img",
       {
         src: placeholderSrc,
         alt: "",
         "aria-hidden": "true",
-        style: placeholderStyle
+        style: placeholderStyle,
+        onTransitionEnd: () => {
+          if (isImageLoaded) {
+            setIsPlaceholderRemoved(true);
+          }
+        }
       }
     )
   ] });

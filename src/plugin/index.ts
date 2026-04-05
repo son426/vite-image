@@ -135,6 +135,16 @@ export function viteImage(config?: ViteImageConfig): PluginOption[] {
       const [basePath, search] = id.split("?");
       const params = new URLSearchParams(search);
 
+      // vite-imagetools가 처리할 서브임포트는 절대 가로채지 않음
+      // (generateImageCode가 생성한 ?w=...&as=srcset 등)
+      if (
+        params.has("as") ||
+        params.has("inline") ||
+        params.has("format")
+      ) {
+        return null;
+      }
+
       // 1. 명시적 쿼리 체크 (기존 로직)
       if (params.has("vite-image")) {
         return generateImageCode(basePath, breakpoints);
@@ -142,7 +152,6 @@ export function viteImage(config?: ViteImageConfig): PluginOption[] {
 
       // 2. autoApply 체크
       if (shouldAutoApply(id, autoApply, filter)) {
-        // ?vite-image 쿼리를 자동으로 추가하여 처리
         return generateImageCode(basePath, breakpoints);
       }
 
