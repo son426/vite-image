@@ -59,20 +59,24 @@ function Image({
     width: currentWidth,
     height: currentHeight
   } = src;
+  const [prevSrc, setPrevSrc] = useState(currentSrc);
+  if (prevSrc !== currentSrc) {
+    setPrevSrc(currentSrc);
+    setIsImageLoaded(false);
+    setIsPlaceholderRemoved(false);
+  }
   const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
   const loadingAttr = priority ? "eager" : loading ?? "lazy";
   const finalSrc = overrideSrc ?? currentSrc;
   const computedSizes = sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
-  useEffect(() => {
-    if (priority && currentSrc) {
-      preload(currentSrc, {
-        as: "image",
-        fetchPriority: "high",
-        ...currentSrcSet ? { imageSrcSet: currentSrcSet } : {},
-        ...computedSizes ? { imageSizes: computedSizes } : {}
-      });
-    }
-  }, [priority, currentSrc, currentSrcSet, computedSizes]);
+  if (priority && currentSrc) {
+    preload(currentSrc, {
+      as: "image",
+      fetchPriority: "high",
+      ...currentSrcSet ? { imageSrcSet: currentSrcSet } : {},
+      ...computedSizes ? { imageSizes: computedSizes } : {}
+    });
+  }
   const getPlaceholderSrc = () => {
     if (overrideSrc) {
       return void 0;
@@ -90,6 +94,12 @@ function Image({
   };
   const placeholderSrc = getPlaceholderSrc();
   const hasShowPlaceholder = !!placeholderSrc;
+  useEffect(() => {
+    if (isImageLoaded && !isPlaceholderRemoved) {
+      const timer = setTimeout(() => setIsPlaceholderRemoved(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isImageLoaded, isPlaceholderRemoved]);
   const containerStyle = fill ? {
     position: "absolute",
     top: 0,
@@ -157,8 +167,8 @@ function Image({
         alt: "",
         "aria-hidden": "true",
         style: placeholderStyle,
-        onTransitionEnd: () => {
-          if (isImageLoaded) {
+        onTransitionEnd: (e) => {
+          if (e.propertyName === "opacity" && isImageLoaded) {
             setIsPlaceholderRemoved(true);
           }
         }

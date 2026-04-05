@@ -61,15 +61,14 @@ function viteImage(config) {
     name: "vite-plugin-vite-image-macro",
     enforce: "pre",
     async load(id) {
-      const [basePath, search] = id.split("?");
+      const qIndex = id.indexOf("?");
+      const basePath = qIndex === -1 ? id : id.slice(0, qIndex);
+      const search = qIndex === -1 ? "" : id.slice(qIndex + 1);
       const params = new URLSearchParams(search);
-      if (params.has("as") || params.has("inline") || params.has("format")) {
-        return null;
-      }
       if (params.has("vite-image")) {
         return generateImageCode(basePath, breakpoints);
       }
-      if (shouldAutoApply(id, autoApply, filter)) {
+      if (!search && shouldAutoApply(basePath, autoApply, filter)) {
         return generateImageCode(basePath, breakpoints);
       }
       return null;

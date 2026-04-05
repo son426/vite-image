@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-
-  type ImgHTMLAttributes,
-  type CSSProperties,
-} from "react";
+import { useState, useEffect, type ImgHTMLAttributes, type CSSProperties } from "react";
 import { preload } from "react-dom";
 import type { ResponsiveImageData } from "../types";
 
@@ -111,6 +105,14 @@ export default function Image({
     height: currentHeight,
   } = src;
 
+  // src 변경 시 상태 리셋 (이미지 스왑, 캐러셀 등)
+  const [prevSrc, setPrevSrc] = useState(currentSrc);
+  if (prevSrc !== currentSrc) {
+    setPrevSrc(currentSrc);
+    setIsImageLoaded(false);
+    setIsPlaceholderRemoved(false);
+  }
+
   // blurDataURL 우선순위: prop으로 제공된 것 > src 객체의 것
   const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
 
@@ -124,17 +126,16 @@ export default function Image({
   const computedSizes =
     sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
 
-  // 5. Priority 처리: priority={true}일 때 preload (마운트 시 1회만)
-  useEffect(() => {
-    if (priority && currentSrc) {
-      preload(currentSrc, {
-        as: "image",
-        fetchPriority: "high",
-        ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
-        ...(computedSizes ? { imageSizes: computedSizes } : {}),
-      });
-    }
-  }, [priority, currentSrc, currentSrcSet, computedSizes]);
+  // 5. Priority 처리: priority={true}일 때 preload
+  // preload()는 렌더 중 호출하도록 설계된 API (paint 전에 fetch 시작)
+  if (priority && currentSrc) {
+    preload(currentSrc, {
+      as: "image",
+      fetchPriority: "high",
+      ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
+      ...(computedSizes ? { imageSizes: computedSizes } : {}),
+    });
+  }
 
   // 6. placeholder 처리 (Next.js Image 호환) - overrideSrc가 있으면 placeholder 비활성화
   const getPlaceholderSrc = (): string | undefined => {
@@ -158,6 +159,15 @@ export default function Image({
 
   const placeholderSrc = getPlaceholderSrc();
   const hasShowPlaceholder = !!placeholderSrc;
+
+  // Placeholder 제거: onTransitionEnd + fallback timer
+  // onTransitionEnd가 발생하지 않는 케이스 대비 (캐시 히트, 백그라운드 탭, reduced-motion 등)
+  useEffect(() => {
+    if (isImageLoaded && !isPlaceholderRemoved) {
+      const timer = setTimeout(() => setIsPlaceholderRemoved(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isImageLoaded, isPlaceholderRemoved]);
 
   // 7. 컨테이너 스타일 계산 (기존 로직 유지)
   const containerStyle: CSSProperties = fill
@@ -233,15 +243,15 @@ export default function Image({
         style={{ ...imgStyle, zIndex: 0 }}
       />
 
-      {/* Placeholder 레이어 (overrideSrc가 없을 때만 표시, 트랜지션 후 DOM에서 제거) */}
+      {/* Placeholder 레이어: 트랜지션 완료 또는 fallback timer 후 DOM에서 제거 */}
       {!overrideSrc && hasShowPlaceholder && !isPlaceholderRemoved && (
         <img
           src={placeholderSrc}
           alt=""
           aria-hidden="true"
           style={placeholderStyle}
-          onTransitionEnd={() => {
-            if (isImageLoaded) {
+          onTransitionEnd={(e) => {
+            if (e.propertyName === "opacity" && isImageLoaded) {
               setIsPlaceholderRemoved(true);
             }
           }}
