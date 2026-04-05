@@ -62,7 +62,7 @@ export default defineConfig({
   plugins: [
     viteImage({
       autoApply: {
-        extensions: [".jpg"],
+        extensions: [".jpg"], // Required — must include the leading dot
       },
     }),
   ],
@@ -152,12 +152,15 @@ viteImage({
 
 **Auto-apply without query string:**
 
+> **`extensions` is required for autoApply.** Without it, autoApply silently does nothing.
+> Values must include the leading dot and are case-sensitive (e.g., `".jpg"`, not `"jpg"` or `".JPG"`).
+
 ```typescript
 viteImage({
   autoApply: {
-    extensions: [".jpg", ".png", ".webp"],
-    include: ["src/assets/**"],
-    exclude: ["src/icons/**"],
+    extensions: [".jpg", ".png", ".webp"], // Required — must include the leading dot
+    include: ["src/assets/**"],            // Optional — glob pattern for file paths
+    exclude: ["src/icons/**"],             // Optional — glob pattern to exclude
   },
 });
 ```
@@ -205,7 +208,7 @@ function MyComponent() {
 // vite.config.ts
 viteImage({
   autoApply: {
-    extensions: [".jpg", ".png"],
+    extensions: [".jpg", ".png"], // Required — must include the leading dot
     include: ["src/assets/**"],
   },
 });

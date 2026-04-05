@@ -13,7 +13,8 @@ export interface ResponsiveImageData {
 
 // Plugin configuration types
 export interface AutoApplyConfig {
-  extensions?: string[];
+  /** File extensions to process. Must include the leading dot (e.g., `[".jpg", ".png"]`). Case-sensitive. */
+  extensions: string[];
   include?: string[];
   exclude?: string[];
 }

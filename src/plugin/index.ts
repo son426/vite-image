@@ -129,6 +129,15 @@ export function viteImage(config?: ViteImageConfig): PluginOption[] {
   const autoApply = config?.autoApply;
   const imagetoolsOptions = config?.imagetools;
 
+  // autoApply 설정 검증: extensions 누락 시 경고
+  if (autoApply && (!autoApply.extensions || autoApply.extensions.length === 0)) {
+    console.warn(
+      '[vite-image] autoApply is enabled but "extensions" is empty or missing. ' +
+        "No images will be auto-processed. " +
+        'Example: autoApply: { extensions: [".jpg", ".png", ".webp"] }'
+    );
+  }
+
   // Glob 필터 생성 (autoApply가 있을 때만)
   const filter = autoApply
     ? createFilter(autoApply.include, autoApply.exclude)
