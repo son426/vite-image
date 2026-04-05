@@ -128,7 +128,8 @@ export default function Image({
 
   // 5. Priority 처리: priority={true}일 때 preload
   // preload()는 렌더 중 호출하도록 설계된 API (paint 전에 fetch 시작)
-  if (priority && currentSrc) {
+  // React 18에서는 preload가 없으므로 가드 필요 (graceful degradation)
+  if (priority && currentSrc && typeof preload === "function") {
     preload(currentSrc, {
       as: "image",
       fetchPriority: "high",
