@@ -13,6 +13,13 @@ export type { ViteImageConfig, AutoApplyConfig } from "../types";
 // Default configuration
 const DEFAULT_BREAKPOINTS = [640, 1024, 1920];
 
+function validateBreakpoints(breakpoints: number[]): number[] {
+  if (!breakpoints || breakpoints.length === 0) {
+    return DEFAULT_BREAKPOINTS;
+  }
+  return breakpoints;
+}
+
 // Utility functions
 function getFileExtension(id: string): string | null {
   // 쿼리 파라미터 제거
@@ -118,7 +125,7 @@ function shouldAutoApply(
  */
 export function viteImage(config?: ViteImageConfig): PluginOption[] {
   // Config 병합
-  const breakpoints = config?.breakpoints ?? DEFAULT_BREAKPOINTS;
+  const breakpoints = validateBreakpoints(config?.breakpoints ?? DEFAULT_BREAKPOINTS);
   const autoApply = config?.autoApply;
   const imagetoolsOptions = config?.imagetools;
 
