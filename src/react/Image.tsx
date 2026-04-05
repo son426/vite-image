@@ -1,4 +1,4 @@
-import { useState, type ImgHTMLAttributes, type CSSProperties } from "react";
+import { useState, useEffect, type ImgHTMLAttributes, type CSSProperties } from "react";
 import { preload } from "react-dom";
 import type { ResponsiveImageData } from "../types";
 
@@ -94,6 +94,7 @@ export default function Image({
   ...props
 }: ImageProps) {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+  const [isPlaceholderRemoved, setIsPlaceholderRemoved] = useState(false);
 
   // 1. 데이터 추출: src 객체에서 바로 꺼내씀 (병합 로직 제거)
   const {
@@ -103,6 +104,14 @@ export default function Image({
     width: currentWidth,
     height: currentHeight,
   } = src;
+
+  // src 변경 시 상태 리셋 (이미지 스왑, 캐러셀 등)
+  const [prevSrc, setPrevSrc] = useState(currentSrc);
+  if (prevSrc !== currentSrc) {
+    setPrevSrc(currentSrc);
+    setIsImageLoaded(false);
+    setIsPlaceholderRemoved(false);
+  }
 
   // blurDataURL 우선순위: prop으로 제공된 것 > src 객체의 것
   const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
@@ -118,6 +127,7 @@ export default function Image({
     sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
 
   // 5. Priority 처리: priority={true}일 때 preload
+  // preload()는 렌더 중 호출하도록 설계된 API (paint 전에 fetch 시작)
   if (priority && currentSrc) {
     preload(currentSrc, {
       as: "image",
@@ -149,6 +159,15 @@ export default function Image({
 
   const placeholderSrc = getPlaceholderSrc();
   const hasShowPlaceholder = !!placeholderSrc;
+
+  // Placeholder 제거: onTransitionEnd + fallback timer
+  // onTransitionEnd가 발생하지 않는 케이스 대비 (캐시 히트, 백그라운드 탭, reduced-motion 등)
+  useEffect(() => {
+    if (isImageLoaded && !isPlaceholderRemoved) {
+      const timer = setTimeout(() => setIsPlaceholderRemoved(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [isImageLoaded, isPlaceholderRemoved]);
 
   // 7. 컨테이너 스타일 계산 (기존 로직 유지)
   const containerStyle: CSSProperties = fill
@@ -224,13 +243,18 @@ export default function Image({
         style={{ ...imgStyle, zIndex: 0 }}
       />
 
-      {/* Placeholder 레이어 (overrideSrc가 없을 때만 표시) */}
-      {!overrideSrc && hasShowPlaceholder && (
+      {/* Placeholder 레이어: 트랜지션 완료 또는 fallback timer 후 DOM에서 제거 */}
+      {!overrideSrc && hasShowPlaceholder && !isPlaceholderRemoved && (
         <img
           src={placeholderSrc}
           alt=""
           aria-hidden="true"
           style={placeholderStyle}
+          onTransitionEnd={(e) => {
+            if (e.propertyName === "opacity" && isImageLoaded) {
+              setIsPlaceholderRemoved(true);
+            }
+          }}
         />
       )}
     </div>

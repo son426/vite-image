@@ -132,17 +132,19 @@ export function viteImage(config?: ViteImageConfig): PluginOption[] {
     name: "vite-plugin-vite-image-macro",
     enforce: "pre" as const,
     async load(id: string) {
-      const [basePath, search] = id.split("?");
+      const qIndex = id.indexOf("?");
+      const basePath = qIndex === -1 ? id : id.slice(0, qIndex);
+      const search = qIndex === -1 ? "" : id.slice(qIndex + 1);
       const params = new URLSearchParams(search);
 
-      // 1. 명시적 쿼리 체크 (기존 로직)
+      // 1. 명시적 ?vite-image 쿼리: 항상 처리
       if (params.has("vite-image")) {
         return generateImageCode(basePath, breakpoints);
       }
 
-      // 2. autoApply 체크
-      if (shouldAutoApply(id, autoApply, filter)) {
-        // ?vite-image 쿼리를 자동으로 추가하여 처리
+      // 2. autoApply: 쿼리스트링이 없는 bare import만 대상
+      // 생성된 서브임포트는 항상 쿼리가 있으므로 구조적으로 무한 루프 불가능
+      if (!search && shouldAutoApply(basePath, autoApply, filter)) {
         return generateImageCode(basePath, breakpoints);
       }
 
