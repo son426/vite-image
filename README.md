@@ -17,6 +17,35 @@ Simply add the plugin to your config, and start using the `<Image />` component 
 
 ---
 
+## At a glance
+
+> `hero.jpg` (2.4 MB) → 3 responsive WebP images (42–148 KB) + inline blur placeholder (820 B). **94% smaller, zero config.**
+
+```diff
+  // vite.config.ts
+  export default defineConfig({
+    plugins: [
++     viteImage(),
+    ],
+  })
+
+  // Hero.tsx
+- import hero from "./assets/hero.jpg"
++ import hero from "./assets/hero.jpg?vite-image"
+
+- <img src={hero} alt="Hero" />
++ <Image src={hero} alt="Hero" placeholder="blur" />
+```
+
+|  | `<img>` | `<Image>` |
+|---|---|---|
+| **Size** | 2.4 MB | 148 KB **(94% ↓)** |
+| **Responsive** | Single size | 640w / 1024w / 1920w |
+| **Placeholder** | Blank | Blur LQIP (instant) |
+| **CLS** | 0.24 | 0 |
+
+---
+
 ## 🚀 Quick Look
 
 Add it to `vite.config.ts`, and use it like this:
