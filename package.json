@@ -1,6 +1,6 @@
 {
   "name": "@son426/vite-image",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "A Vite plugin and React component for optimized images with LQIP support using vite-imagetools",
   "type": "module",
   "main": "./dist/index.js",
@@ -53,7 +53,7 @@
   "bugs": {
     "url": "https://github.com/son426/vite-image/issues"
   },
-  "homepage": "https://github.com/son426/vite-image#readme",
+  "homepage": "https://vite-image.web.app",
   "dependencies": {
     "@rollup/pluginutils": "^5.3.0",
     "vite-imagetools": "^9.0.2"
