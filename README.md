@@ -2,6 +2,9 @@
 
 **The Next.js `<Image />` experience, now in Vite.**
 
+[![Demo](https://img.shields.io/badge/Demo-Live-00ff41?style=flat-square)](https://vite-image.web.app)
+[![npm](https://img.shields.io/npm/v/@son426/vite-image?style=flat-square)](https://www.npmjs.com/package/@son426/vite-image)
+
 - **Bring the power of Next.js's automatic image optimization to your Vite projects.**
 - **Dedicated to the Vite + React ecosystem.**
 
