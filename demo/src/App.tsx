@@ -53,7 +53,9 @@ export default function App() {
         </p>
         <p className="measurement-note">
           This page reports the browser-selected URL, intrinsic dimensions, and
-          fetched response body size. It does not estimate load time or CLS.
+          a separate post-load fetch&apos;s decoded response Blob size. The fetch
+          may use the browser cache, so this is not wire-transfer size, load
+          time, or CLS.
         </p>
       </header>
 
@@ -64,7 +66,10 @@ export default function App() {
       <section className="comparison-grid" aria-label="Live image comparison">
         <article className="image-card">
           <div className="card-label card-label--optimized">
-            <span className="status-dot status-dot--optimized" />
+            <span
+              className="status-dot status-dot--optimized"
+              aria-hidden="true"
+            />
             vite-image &lt;Image /&gt;
           </div>
           <div className="image-frame">
@@ -84,7 +89,7 @@ export default function App() {
           </div>
           <div className="card-status" aria-live="polite">
             {optimized.measurement.status === "ready"
-              ? "selected response measured"
+              ? "selected asset's follow-up Blob measured"
               : optimized.measurement.status === "error"
                 ? `measurement unavailable: ${optimized.measurement.error}`
                 : "loading and measuring…"}
@@ -93,7 +98,7 @@ export default function App() {
 
         <article className="image-card">
           <div className="card-label">
-            <span className="status-dot" />
+            <span className="status-dot" aria-hidden="true" />
             native &lt;img /&gt;, original JPEG
           </div>
           <div className="image-frame">
@@ -111,7 +116,7 @@ export default function App() {
           </div>
           <div className="card-status" aria-live="polite">
             {original.measurement.status === "ready"
-              ? "original response measured"
+              ? "original asset's follow-up Blob measured"
               : original.measurement.status === "error"
                 ? `measurement unavailable: ${original.measurement.error}`
                 : "loading and measuring…"}

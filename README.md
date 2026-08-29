@@ -158,29 +158,22 @@ input width, the intrinsic width becomes the final candidate.
 
 ## Generated data
 
-Import types from the package root:
+Import the public types from the package root and use them with generated data:
 
 ```ts
 import type {
   OptimizedImageData,
   OptimizedImageSource,
 } from "@son426/vite-image";
+import hero from "./assets/hero.jpg?vite-image";
 
-interface OptimizedImageSource {
-  type: string;
-  srcSet: string;
-}
-
-interface OptimizedImageData {
-  src: string;
-  width: number;
-  height: number;
-  srcSet?: string;
-  sources?: OptimizedImageSource[];
-  blurDataURL?: string;
-}
+hero satisfies OptimizedImageData;
+export const firstSource: OptimizedImageSource | undefined = hero.sources?.[0];
 ```
 
+- `OptimizedImageData` contains required `src`, `width`, and `height` fields,
+  plus optional `srcSet`, `sources`, and `blurDataURL` fields.
+- Each `OptimizedImageSource` contains a MIME `type` and its `srcSet`.
 - `src`, `width`, and `height` describe the largest generated input-format
   fallback.
 - `srcSet` contains fallback candidates.

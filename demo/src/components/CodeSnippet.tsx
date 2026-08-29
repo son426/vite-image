@@ -8,29 +8,39 @@ export default defineConfig({
     ...viteImage({
       widths: [480, 960, 1440],
       formats: ["avif", "webp"],
+      quality: 78,
+      placeholder: { width: 24, quality: 24, blur: 2 },
     }),
   ],
 })`;
 
-const componentCode = `import Image from "@son426/vite-image/react"
-import hero from "./hero.jpg?vite-image"
+const componentCode = `import { useRef } from "react"
+import Image from "@son426/vite-image/react"
+import heroImage from "./assets/hero.jpg?vite-image"
 
-<div className="hero-frame">
-  <Image
-    ref={imageRef}
-    src={hero}
-    alt="Mountain landscape"
-    fill
-    sizes="(max-width: 720px) calc(100vw - 48px), 420px"
-    placeholder="blur"
-    style={{ objectFit: "cover" }}
-  />
-</div>`;
+export function Hero() {
+  const imageRef = useRef<HTMLImageElement>(null)
+
+  return (
+    <div className="image-frame">
+      <Image
+        ref={imageRef}
+        src={heroImage}
+        alt="Mountain landscape optimized by vite-image"
+        fill
+        sizes="(max-width: 720px) calc(100vw - 48px), 420px"
+        priority
+        placeholder="blur"
+        style={{ objectFit: "cover" }}
+      />
+    </div>
+  )
+}`;
 
 export default function CodeSnippet() {
   return (
     <section className="code-section">
-      <div className="section-label">// code running above</div>
+      <div className="section-label">// configuration and image props running above</div>
       <div className="code-grid">
         <div>
           <div className="code-title">vite.config.ts</div>

@@ -54,7 +54,7 @@ export default function ComparisonTable({
 
   const rows = [
     {
-      label: "selected response body",
+      label: "follow-up response Blob",
       optimized: formatBytes(optimized.bytes),
       original: formatBytes(original.bytes),
       detail:
@@ -108,6 +108,10 @@ export default function ComparisonTable({
       <div className="section-label">// observed results</div>
       <div className="table-scroll">
         <table>
+          <caption className="sr-only">
+            Browser-selected image metadata and follow-up fetch response Blob
+            sizes
+          </caption>
           <thead>
             <tr>
               <th scope="col">observation</th>
@@ -134,9 +138,12 @@ export default function ComparisonTable({
         </table>
       </div>
       <p className="measurement-method">
-        Response body sizes come from <code>fetch(url).blob().size</code> after
-        each image fires <code>load</code>. A dash means the browser could not
-        provide a measurement.
+        After each image fires <code>load</code>, the demo makes a separate{" "}
+        <code>fetch(currentSrc)</code> request and reads{" "}
+        <code>response.blob().size</code>. The browser may serve that request from
+        cache. The value is the response body size after HTTP content decoding,
+        not bytes transferred over the wire. A dash means the follow-up
+        measurement failed.
       </p>
     </section>
   );

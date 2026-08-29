@@ -5,10 +5,12 @@ pnpm workspace. It demonstrates the v1 `?vite-image` import, AVIF and WebP
 `<source>` output, a responsive fill layout, the blur lifecycle, and a forwarded
 image ref.
 
-The comparison reports only browser-observed values. It reads `currentSrc` and
-natural dimensions from the loaded `HTMLImageElement`, then measures the selected
-response with `fetch(url).blob().size`. It does not present cache-sensitive load
-times, synthetic CLS values, or fixed compression claims.
+The comparison reads `currentSrc` and natural dimensions from the loaded
+`HTMLImageElement`. After `load`, it makes a separate `fetch(currentSrc)` request,
+which the browser may serve from cache, and reports `response.blob().size`. That
+value is the response body size after HTTP content decoding, not bytes transferred
+over the wire. The demo does not present load times, synthetic CLS values, or
+fixed compression claims.
 
 From the repository root:
 
