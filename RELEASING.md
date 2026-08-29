@@ -33,7 +33,7 @@ same fields and current runtime requirements.
 3. Dispatch the `npm release` workflow at that tag. For example:
 
    ```sh
-   gh workflow run release.yml --ref v1.0.0
+   gh workflow run release.yml --ref v1.0.1
    ```
 
    The workflow rejects branch refs, mismatched versions, commits outside
@@ -43,7 +43,7 @@ same fields and current runtime requirements.
 5. Deprecate old releases with a message that directs users to v1:
 
    ```sh
-   npm deprecate '@son426/vite-image@<1.0.0' 'Unsupported: upgrade to @son426/vite-image@^1.0.0 for React 18 SSR and image decoder security fixes.'
+   npm deprecate '@son426/vite-image@<1.0.1' 'Unsupported: upgrade to @son426/vite-image@^1.0.1 for patched Vite peers, React 18 SSR, and image decoder security fixes.'
    ```
 
 6. Create the GitHub Release from the same tag using the matching changelog

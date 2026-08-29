@@ -15,7 +15,7 @@ optional inline blur placeholder. It does not optimize remote URLs at runtime.
 ## Requirements
 
 - Node.js 22 or newer
-- Vite 7 or 8
+- Vite 7.3.6+ or 8.2.2+
 - React and React DOM 18 or 19 when using `@son426/vite-image/react`
 - TypeScript 5.4 or newer for TypeScript projects
 - An ESM project

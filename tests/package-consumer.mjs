@@ -11,6 +11,9 @@ import { fileURLToPath, pathToFileURL, URL } from "node:url";
 import sharp from "sharp";
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
+const projectManifest = JSON.parse(
+  await readFile(join(projectRoot, "package.json"), "utf8"),
+);
 const temporaryRoot = await mkdtemp(join(tmpdir(), "vite-image-package-consumer-"));
 
 function run(command, args, cwd) {
@@ -59,6 +62,7 @@ try {
     react: { optional: true },
     "react-dom": { optional: true },
   });
+  assert.equal(packedManifest.peerDependencies.vite, "^7.3.6 || ^8.2.2");
   assert.equal(packedManifest.exports["./client"].types, "./client.d.ts");
   await Promise.all([
     readFile(join(packedRoot, "dist/index.js")),
@@ -86,7 +90,7 @@ try {
           "@types/react": "18.2.79",
           "@types/react-dom": "18.2.25",
           typescript: "5.4.5",
-          vite: "7.2.4",
+          vite: "7.3.6",
         },
       },
       null,
@@ -214,6 +218,7 @@ assert.ok(markup.includes('src="/hero-6.png"'));
     ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=error"],
     consumerDirectory,
   );
+  run("npm", ["audit", "--audit-level=high"], consumerDirectory);
   run(join(consumerDirectory, "node_modules/.bin/tsc"), ["-p", "tsconfig.json"], consumerDirectory);
   run(process.execPath, ["runtime.mjs"], consumerDirectory);
   run(
@@ -264,7 +269,7 @@ assert.ok(markup.includes('src="/hero-6.png"'));
       "utf8",
     ),
   );
-  assert.equal(installedManifest.version, "1.0.0");
+  assert.equal(installedManifest.version, projectManifest.version);
   assert.equal(
     pathToFileURL(
       join(consumerDirectory, "node_modules/@son426/vite-image/client.d.ts"),

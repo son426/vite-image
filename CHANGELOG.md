@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1 - 2026-08-29
+
+### Security
+
+- Raised the supported Vite range to patched releases: Vite 7.3.6+ or 8.2.2+.
+- Added a high-severity vulnerability gate to the packed React 18 and Vite 7
+  consumer test.
+
 ## 1.0.0 - 2026-08-29
 
 ### Added
