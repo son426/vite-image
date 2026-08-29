@@ -45,9 +45,13 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test:unit": "vitest run src",
+    "test:integration": "vitest run --config vitest.integration.config.ts && node tests/package-consumer.mjs",
+    "test:browser": "pnpm run build && playwright test",
+    "test": "pnpm run test:unit && pnpm run test:integration",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
     "package:check": "pnpm run build && publint && attw --pack . --profile esm-only",
+    "check:browser": "pnpm run test:browser",
     "prepublishOnly": "pnpm run check && pnpm run package:check"
   },
   "keywords": [
@@ -81,6 +85,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.62.1",
     "@testing-library/react": "16.3.3",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
@@ -90,6 +95,7 @@
     "publint": "^0.3.24",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "sharp": "0.35.4",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.68.0",

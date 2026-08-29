@@ -18,6 +18,13 @@
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["src/**/*", "test-d/**/*", "client.d.ts"],
+  "include": [
+    "src/**/*",
+    "test-d/**/*",
+    "tests/**/*",
+    "client.d.ts",
+    "playwright.config.ts",
+    "vitest.integration.config.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
