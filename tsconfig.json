@@ -9,12 +9,15 @@
     "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
+    "paths": {
+      "@son426/vite-image": ["./src/index.ts"]
+    },
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["src/**/*", "client.d.ts"],
+  "include": ["src/**/*", "test-d/**/*", "client.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

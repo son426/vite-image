@@ -1,172 +1,348 @@
-// src/plugin/index.ts
-
-import type { PluginOption } from "vite";
+import type { Plugin, PluginOption } from "vite";
 import { imagetools } from "vite-imagetools";
-import { createFilter } from "@rollup/pluginutils";
-import type { ViteImageConfig, AutoApplyConfig } from "../types";
 
-export type ViteImagePluginOptions = Parameters<typeof imagetools>[0];
+import type { ViteImageConfig } from "../types";
 
-// Re-export types for convenience
-export type { ViteImageConfig, AutoApplyConfig } from "../types";
+export type {
+  OptimizedImageData,
+  OptimizedImageSource,
+  ViteImageConfig,
+} from "../types";
 
-// Default configuration
-const DEFAULT_BREAKPOINTS = [640, 1024, 1920];
+const DEFAULT_WIDTHS = [640, 1024, 1920] as const;
+const DEFAULT_FORMATS = ["webp"] as const;
+const DEFAULT_QUALITY = 80;
+const DEFAULT_PLACEHOLDER = {
+  width: 20,
+  quality: 20,
+  blur: 2,
+} as const;
 
-function validateBreakpoints(breakpoints: number[]): number[] {
-  if (!breakpoints || breakpoints.length === 0) {
-    return DEFAULT_BREAKPOINTS;
+const CONFIG_KEYS = new Set([
+  "widths",
+  "formats",
+  "quality",
+  "placeholder",
+  "cache",
+  "removeMetadata",
+]);
+const PLACEHOLDER_KEYS = new Set(["width", "quality", "blur"]);
+const CACHE_KEYS = new Set(["dir", "retention"]);
+const SUPPORTED_FORMATS = new Set(["avif", "webp"]);
+const INPUT_FORMATS = new Set(["jpg", "jpeg", "png", "webp", "avif"]);
+
+type OutputFormat = "avif" | "webp";
+type InputFormat = "jpeg" | "png" | "webp" | "avif";
+
+interface NormalizedConfig {
+  widths: readonly number[];
+  formats: readonly OutputFormat[];
+  quality: number;
+  placeholder: false | { width: number; quality: number; blur: number };
+  cache: false | { dir?: string; retention?: number } | undefined;
+  removeMetadata: boolean;
+}
+
+function fail(message: string): never {
+  throw new TypeError(`[vite-image] ${message}`);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function rejectUnknownKeys(
+  value: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  label: string,
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      fail(`${label} contains unknown key ${JSON.stringify(key)}`);
+    }
   }
-  return breakpoints;
 }
 
-// Utility functions
-function getFileExtension(id: string): string | null {
-  // 쿼리 파라미터 제거
-  const [basePath] = id.split("?");
-
-  // 확장자 추출
-  const match = basePath.match(/\.([^.]+)$/);
-  return match ? `.${match[1]}` : null;
-}
-
-function matchesExtension(id: string, extensions: string[]): boolean {
-  if (!extensions || extensions.length === 0) return false;
-
-  const ext = getFileExtension(id);
-  if (!ext) return false;
-
-  return extensions.includes(ext);
-}
-
-function generateSrcSetParams(breakpoints: number[]): string {
-  return `w=${breakpoints.join(";")}&format=webp&as=srcset`;
-}
-
-function generateMetaParams(breakpoints: number[]): string {
-  const maxWidth = Math.max(...breakpoints);
-  return `w=${maxWidth}&format=webp&as=meta`;
-}
-
-function generateImageCode(basePath: string, breakpoints: number[]): string {
-  const srcSetParams = generateSrcSetParams(breakpoints);
-  const metaParams = generateMetaParams(breakpoints);
-  const lqipParams = "w=20&blur=2&quality=20&format=webp&inline";
-
-  // meta를 먼저 import하고, 그 다음에 srcSet과 blurDataURL을 import
-  // 이렇게 하면 초기화 순서 문제를 방지할 수 있음
-  return `
-    import meta from "${basePath}?${metaParams}";
-    import srcSet from "${basePath}?${srcSetParams}";
-    import blurDataURL from "${basePath}?${lqipParams}";
-    
-    export default {
-      src: meta.src,
-      width: meta.width,
-      height: meta.height,
-      srcSet: srcSet,
-      blurDataURL: blurDataURL
-    };
-  `;
-}
-
-function shouldAutoApply(
-  id: string,
-  autoApply: AutoApplyConfig | undefined,
-  filter: ((id: string) => boolean) | null
-): boolean {
-  // autoApply 설정이 없으면 false
-  if (!autoApply) return false;
-
-  // extensions가 없거나 빈 배열이면 false
-  if (!autoApply.extensions || autoApply.extensions.length === 0) {
-    return false;
+function positiveInteger(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    fail(`${label} must be a positive integer`);
   }
 
-  // 확장자 매칭
-  if (!matchesExtension(id, autoApply.extensions)) {
-    return false;
-  }
-
-  // glob 패턴 매칭 (include/exclude)
-  if (filter && !filter(id)) {
-    return false;
-  }
-
-  return true;
+  return value;
 }
 
-/**
- * Vite plugin for image optimization using vite-imagetools
- * This plugin handles ?vite-image queries and uses imagetools for image processing
- *
- * @param config - Configuration options for vite-image plugin
- * @returns Array of Vite plugins (vite-image macro and imagetools)
- *
- * @example
- * ```ts
- * // vite.config.ts
- * import { defineConfig } from 'vite';
- * import { viteImage } from '@son426/vite-image/plugin';
- *
- * export default defineConfig({
- *   plugins: [
- *     ...viteImage({
- *       breakpoints: [640, 1024, 1920],
- *       autoApply: {
- *         extensions: ['.jpg', '.png'],
- *         include: ['src/**'],
- *         exclude: ['src/icons/**']
- *       }
- *     }),
- *   ],
- * });
- * ```
- */
-export function viteImage(config?: ViteImageConfig): PluginOption[] {
-  // Config 병합
-  const breakpoints = validateBreakpoints(config?.breakpoints ?? DEFAULT_BREAKPOINTS);
-  const autoApply = config?.autoApply;
-  const imagetoolsOptions = config?.imagetools;
+function boundedQuality(value: unknown, label: string): number {
+  if (
+    typeof value !== "number" ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > 100
+  ) {
+    fail(`${label} must be an integer between 1 and 100`);
+  }
 
-  // autoApply 설정 검증: extensions 누락 시 경고
-  if (autoApply && (!autoApply.extensions || autoApply.extensions.length === 0)) {
-    console.warn(
-      '[vite-image] autoApply is enabled but "extensions" is empty or missing. ' +
-        "No images will be auto-processed. " +
-        'Example: autoApply: { extensions: [".jpg", ".png", ".webp"] }'
+  return value;
+}
+
+function normalizeWidths(value: unknown): readonly number[] {
+  if (!Array.isArray(value)) {
+    fail("widths must be an array of positive integers");
+  }
+  if (value.length === 0) {
+    fail("widths must not be empty");
+  }
+
+  const widths = value.map((width, index) =>
+    positiveInteger(width, `widths[${index}]`),
+  );
+
+  for (let index = 1; index < widths.length; index += 1) {
+    if (widths[index] <= widths[index - 1]) {
+      fail("widths must be strictly increasing without duplicates");
+    }
+  }
+
+  return widths;
+}
+
+function normalizeFormats(value: unknown): readonly OutputFormat[] {
+  if (!Array.isArray(value)) {
+    fail("formats must be an array containing avif or webp");
+  }
+  if (value.length === 0) {
+    fail("formats must not be empty");
+  }
+
+  const formats = value.map((format, index) => {
+    if (typeof format !== "string" || !SUPPORTED_FORMATS.has(format)) {
+      fail(`formats[${index}] must be "avif" or "webp"`);
+    }
+    return format as OutputFormat;
+  });
+
+  if (new Set(formats).size !== formats.length) {
+    fail("formats must not contain duplicates");
+  }
+
+  return formats;
+}
+
+function normalizePlaceholder(
+  value: unknown,
+): NormalizedConfig["placeholder"] {
+  if (value === false) return false;
+  if (!isRecord(value)) {
+    fail("placeholder must be false or an options object");
+  }
+
+  rejectUnknownKeys(value, PLACEHOLDER_KEYS, "placeholder");
+
+  const width =
+    value.width === undefined
+      ? DEFAULT_PLACEHOLDER.width
+      : positiveInteger(value.width, "placeholder.width");
+  const quality =
+    value.quality === undefined
+      ? DEFAULT_PLACEHOLDER.quality
+      : boundedQuality(value.quality, "placeholder.quality");
+  const blur = value.blur === undefined ? DEFAULT_PLACEHOLDER.blur : value.blur;
+
+  if (
+    typeof blur !== "number" ||
+    !Number.isFinite(blur) ||
+    blur < 0.3 ||
+    blur > 1000
+  ) {
+    fail("placeholder.blur must be between 0.3 and 1000");
+  }
+
+  return { width, quality, blur };
+}
+
+function normalizeCache(value: unknown): NormalizedConfig["cache"] {
+  if (value === undefined || value === false) return value;
+  if (!isRecord(value)) {
+    fail("cache must be false or an options object");
+  }
+
+  rejectUnknownKeys(value, CACHE_KEYS, "cache");
+
+  const normalized: { dir?: string; retention?: number } = {};
+
+  if (value.dir !== undefined) {
+    if (typeof value.dir !== "string" || value.dir.trim().length === 0) {
+      fail("cache.dir must be a non-empty string");
+    }
+    normalized.dir = value.dir;
+  }
+
+  if (value.retention !== undefined) {
+    if (
+      typeof value.retention !== "number" ||
+      !Number.isInteger(value.retention) ||
+      value.retention < 0
+    ) {
+      fail("cache.retention must be a non-negative integer");
+    }
+    normalized.retention = value.retention;
+  }
+
+  return normalized;
+}
+
+function normalizeConfig(config: ViteImageConfig | undefined): NormalizedConfig {
+  if (config !== undefined && !isRecord(config)) {
+    fail("config must be an options object");
+  }
+
+  const value: Record<string, unknown> = config ?? {};
+  rejectUnknownKeys(value, CONFIG_KEYS, "config");
+
+  if (
+    value.removeMetadata !== undefined &&
+    typeof value.removeMetadata !== "boolean"
+  ) {
+    fail("removeMetadata must be a boolean");
+  }
+
+  return {
+    widths:
+      value.widths === undefined
+        ? DEFAULT_WIDTHS
+        : normalizeWidths(value.widths),
+    formats:
+      value.formats === undefined
+        ? DEFAULT_FORMATS
+        : normalizeFormats(value.formats),
+    quality:
+      value.quality === undefined
+        ? DEFAULT_QUALITY
+        : boundedQuality(value.quality, "quality"),
+    placeholder:
+      value.placeholder === undefined
+        ? DEFAULT_PLACEHOLDER
+        : normalizePlaceholder(value.placeholder),
+    cache: normalizeCache(value.cache),
+    removeMetadata: value.removeMetadata ?? true,
+  };
+}
+
+function getInputFormat(basePath: string): InputFormat {
+  const match = /\.([^.\\/]+)$/.exec(basePath);
+  const extension = match?.[1].toLowerCase();
+
+  if (extension === undefined || !INPUT_FORMATS.has(extension)) {
+    const display = extension === undefined ? "<none>" : `.${extension}`;
+    fail(
+      `unsupported image extension ${JSON.stringify(display)}; expected jpg, jpeg, png, webp, or avif`,
     );
   }
 
-  // Glob 필터 생성 (autoApply가 있을 때만)
-  const filter = autoApply
-    ? createFilter(autoApply.include, autoApply.exclude)
-    : null;
+  return extension === "jpg" ? "jpeg" : (extension as InputFormat);
+}
 
-  // 커스텀 플러그인: ?vite-image 쿼리를 처리
-  const viteImageMacro: PluginOption = {
-    name: "vite-plugin-vite-image-macro",
-    enforce: "pre" as const,
-    async load(id: string) {
-      const qIndex = id.indexOf("?");
-      const basePath = qIndex === -1 ? id : id.slice(0, qIndex);
-      const search = qIndex === -1 ? "" : id.slice(qIndex + 1);
-      const params = new URLSearchParams(search);
+function createImportSpecifier(
+  basePath: string,
+  entries: readonly (readonly [string, string])[],
+): string {
+  const searchParams = new URLSearchParams(
+    entries.map(([key, value]) => [key, value]),
+  );
+  return `${basePath}?${searchParams.toString()}`;
+}
 
-      // 1. 명시적 ?vite-image 쿼리: 항상 처리
-      if (params.has("vite-image")) {
-        return generateImageCode(basePath, breakpoints);
+function createModuleCode(
+  basePath: string,
+  inputFormat: InputFormat,
+  config: NormalizedConfig,
+): string {
+  const transformedFormats = [
+    ...config.formats.filter((format) => format !== inputFormat),
+    inputFormat,
+  ];
+  const sourceFormats = transformedFormats.slice(0, -1);
+  const pictureSpecifier = createImportSpecifier(basePath, [
+    ["w", config.widths.join(";")],
+    ["format", transformedFormats.join(";")],
+    ["quality", String(config.quality)],
+    ["as", "picture"],
+  ]);
+  const placeholderSpecifier =
+    config.placeholder === false
+      ? undefined
+      : createImportSpecifier(basePath, [
+          ["w", String(config.placeholder.width)],
+          ["blur", String(config.placeholder.blur)],
+          ["quality", String(config.placeholder.quality)],
+          ["format", "webp"],
+          ["inline", ""],
+        ]);
+
+  return [
+    `import picture from ${JSON.stringify(pictureSpecifier)};`,
+    placeholderSpecifier === undefined
+      ? undefined
+      : `import blurDataURL from ${JSON.stringify(placeholderSpecifier)};`,
+    "",
+    `const fallbackFormat = ${JSON.stringify(inputFormat)};`,
+    `const sourceFormats = ${JSON.stringify(sourceFormats)};`,
+    "const pictureSources = picture.sources ?? {};",
+    "const fallbackSrcSet = pictureSources[fallbackFormat];",
+    "const sources = sourceFormats.flatMap((format) => {",
+    "  const srcSet = pictureSources[format];",
+    "  return srcSet ? [{ type: `image/${format}`, srcSet }] : [];",
+    "});",
+    "const imageData = {",
+    "  src: picture.img.src,",
+    "  width: picture.img.w,",
+    "  height: picture.img.h,",
+    "  ...(fallbackSrcSet ? { srcSet: fallbackSrcSet } : {}),",
+    "  ...(sources.length > 0 ? { sources } : {}),",
+    placeholderSpecifier === undefined
+      ? undefined
+      : "  ...(blurDataURL ? { blurDataURL } : {}),",
+    "};",
+    "",
+    "export default imageData;",
+    "",
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join("\n");
+}
+
+function createMacroPlugin(config: NormalizedConfig): Plugin {
+  return {
+    name: "vite-image:macro",
+    enforce: "pre",
+    async load(id) {
+      const queryIndex = id.indexOf("?");
+      if (queryIndex === -1) return null;
+
+      const basePath = id.slice(0, queryIndex);
+      const query = id.slice(queryIndex + 1);
+      const params = new URLSearchParams(query);
+
+      if (!params.has("vite-image")) return null;
+      if (query !== "vite-image") {
+        fail("?vite-image must be the only query and must not have a value");
       }
 
-      // 2. autoApply: 쿼리스트링이 없는 bare import만 대상
-      // 생성된 서브임포트는 항상 쿼리가 있으므로 구조적으로 무한 루프 불가능
-      if (!search && shouldAutoApply(basePath, autoApply, filter)) {
-        return generateImageCode(basePath, breakpoints);
-      }
-
-      return null;
+      return createModuleCode(basePath, getInputFormat(basePath), config);
     },
   };
+}
 
-  return [viteImageMacro, imagetools(imagetoolsOptions)];
+/** Creates the exact-query macro and the underlying image transformer. */
+export function viteImage(config?: ViteImageConfig): PluginOption[] {
+  const normalized = normalizeConfig(config);
+  const imagetoolsOptions: Parameters<typeof imagetools>[0] = {
+    removeMetadata: normalized.removeMetadata,
+    ...(normalized.cache === undefined
+      ? {}
+      : normalized.cache === false
+        ? { cache: { enabled: false } }
+        : { cache: { enabled: true, ...normalized.cache } }),
+  };
+
+  return [createMacroPlugin(normalized), imagetools(imagetoolsOptions)];
 }

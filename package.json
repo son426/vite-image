@@ -71,7 +71,6 @@
   },
   "homepage": "https://vite-image.web.app",
   "dependencies": {
-    "@rollup/pluginutils": "^5.4.0",
     "vite-imagetools": "^10.0.1"
   },
   "peerDependencies": {

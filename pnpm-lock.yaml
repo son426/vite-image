@@ -12,9 +12,6 @@ importers:
 
   .:
     dependencies:
-      '@rollup/pluginutils':
-        specifier: ^5.4.0
-        version: 5.4.0(rollup@4.63.1)
       vite-imagetools:
         specifier: ^10.0.1
         version: 10.0.1(@types/node@26.4.0)(rollup@4.63.1)(vite@8.2.2(@types/node@26.4.0)(esbuild@0.27.2))
