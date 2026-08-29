@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  quality:
+    name: Node ${{ matrix.node }} 전체 검사
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: pnpm 설치
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+      - name: Node.js ${{ matrix.node }} 설정
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - name: 고정 의존성 설치
+        run: pnpm install --frozen-lockfile
+      - name: 타입·린트·단위·통합·데모 검사
+        run: pnpm run check
+      - name: 배포 패키지 검사
+        run: pnpm run package:check
+      - name: 알려진 high 취약점 검사
+        run: pnpm audit --audit-level=high
+
+  compatibility:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Vite 7 · React 18 · TypeScript 5.4
+            node: 22
+            vite: 7.3.6
+            react: 18.3.1
+            react_types: 18.3.31
+            react_dom_types: 18.3.7
+            node_types: 22.12.0
+            typescript: 5.4.5
+          - label: Vite 8 · React 19 · TypeScript 5.9
+            node: 24
+            vite: 8.2.2
+            react: 19.2.8
+            react_types: 19.2.18
+            react_dom_types: 19.2.5
+            node_types: 26.4.0
+            typescript: 5.9.3
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: pnpm 설치
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+      - name: Node.js ${{ matrix.node }} 설정
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - name: 고정 의존성 설치
+        run: pnpm install --frozen-lockfile
+      - name: 지원 버전 조합 설치
+        run: >-
+          pnpm add --save-dev --ignore-workspace-root-check --lockfile=false
+          vite@${{ matrix.vite }}
+          react@${{ matrix.react }}
+          react-dom@${{ matrix.react }}
+          @types/react@${{ matrix.react_types }}
+          @types/react-dom@${{ matrix.react_dom_types }}
+          @types/node@${{ matrix.node_types }}
+          typescript@${{ matrix.typescript }}
+      - name: 지원 버전 빌드·공개 타입 검사
+        run: pnpm run build && pnpm exec tsc --noEmit -p test-d/tsconfig.json
+      - name: 지원 버전 단위·통합 검사
+        run: pnpm run test
+
+  browser:
+    name: Chromium 브라우저 검사
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: pnpm 설치
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+      - name: Node.js 24 설정
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: 고정 의존성 설치
+        run: pnpm install --frozen-lockfile
+      - name: Chromium 설치
+        run: pnpm exec playwright install --with-deps chromium
+      - name: 실제 브라우저 검사
+        run: pnpm run check:browser

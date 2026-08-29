@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { createRef } from "react";
+import { createRef, version as reactVersion } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -41,7 +41,11 @@ describe("Image SSR", () => {
     expect(markup).toContain('<span style="position:relative;display:inline-block');
     expect(markup).toContain('src="/hero-1280.jpg"');
     expect(markup).toContain('loading="eager"');
-    expect(markup).toContain('fetchPriority="high"');
+    expect(markup).toContain(
+      reactVersion.startsWith("18.")
+        ? 'fetchpriority="high"'
+        : 'fetchPriority="high"',
+    );
     expect(markup).toContain('decoding="async"');
   });
 

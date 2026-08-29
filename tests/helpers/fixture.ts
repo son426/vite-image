@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ export interface ImageFixture {
 }
 
 export async function createImageFixture(prefix: string): Promise<ImageFixture> {
-  const root = await mkdtemp(join(tmpdir(), prefix));
+  const root = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   const sourceDirectory = join(root, "src");
   const pngPath = join(sourceDirectory, "hero.png");
   const jpegPath = join(sourceDirectory, "hero.jpg");
