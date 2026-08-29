@@ -42,7 +42,3 @@ lerna-debug.log*
 
 # TypeScript
 *.tsbuildinfo
-
-# Documentation (except README.md)
-*.md
-!README.md

@@ -1,0 +1,86 @@
+name: npm release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: npm trusted publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: 저장소 체크아웃
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: pnpm 설치
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          run_install: false
+      - name: Node.js 24와 npm registry 설정
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: 태그·버전·npm CLI 검증
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "npm release must run from a tag"
+            exit 1
+          fi
+
+          package_name="$(node --input-type=module -e 'import manifest from "./package.json" with { type: "json" }; process.stdout.write(manifest.name)')"
+          package_version="$(node --input-type=module -e 'import manifest from "./package.json" with { type: "json" }; process.stdout.write(manifest.version)')"
+          expected_tag="v${package_version}"
+          if [ "$GITHUB_REF_NAME" != "$expected_tag" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package version $package_version"
+            exit 1
+          fi
+          release_heading="$(grep -F -- "## ${package_version} - " CHANGELOG.md | head -n 1 || true)"
+          if ! printf '%s\n' "$release_heading" | grep -Eq '^## [0-9]+\.[0-9]+\.[0-9]+ - [0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+            echo "CHANGELOG.md needs a dated heading for $package_version"
+            exit 1
+          fi
+
+          npm_version="$(npm --version)"
+          npm_major="${npm_version%%.*}"
+          npm_minor="$(printf '%s' "$npm_version" | cut -d. -f2)"
+          if [ "$npm_major" -lt 11 ] || { [ "$npm_major" -eq 11 ] && [ "$npm_minor" -lt 5 ]; }; then
+            echo "trusted publishing requires npm 11.5.1 or newer"
+            exit 1
+          fi
+
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          git merge-base --is-ancestor HEAD origin/main
+          if npm view "${package_name}@${package_version}" version >/dev/null 2>&1; then
+            echo "${package_name}@${package_version} is already published"
+            exit 1
+          fi
+      - name: 고정 의존성 설치
+        run: pnpm install --frozen-lockfile
+      - name: OIDC trusted publishing과 provenance 발행
+        run: npm publish --access public
+      - name: registry 버전 확인
+        run: |
+          set -euo pipefail
+          package_name="$(node --input-type=module -e 'import manifest from "./package.json" with { type: "json" }; process.stdout.write(manifest.name)')"
+          package_version="$(node --input-type=module -e 'import manifest from "./package.json" with { type: "json" }; process.stdout.write(manifest.version)')"
+          for attempt in $(seq 1 12); do
+            published_version="$(npm view "${package_name}@${package_version}" version 2>/dev/null || true)"
+            if [ "$published_version" = "$package_version" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "published version did not become visible in the registry"
+          exit 1

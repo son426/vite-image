@@ -69,7 +69,16 @@ import Image from "@son426/vite-image/react";
 import hero from "./assets/hero.jpg?vite-image";
 
 export function Hero() {
-  return <Image src={hero} alt="Mountain landscape" placeholder="blur" />;
+  return (
+    <Image
+      src={hero}
+      alt="Mountain landscape"
+      sizes="(max-width: 768px) 100vw, 768px"
+      placeholder="blur"
+      style={{ display: "block", width: "100%", height: "auto" }}
+      wrapperStyle={{ display: "block", width: "100%", maxWidth: 768 }}
+    />
+  );
 }
 ```
 
@@ -197,7 +206,7 @@ import Image, {
 | --- | --- |
 | `src` | Accepts `OptimizedImageData` or a string URL. A string source may use native `srcSet`, `sizes`, `width`, and `height`. |
 | `fill` | Fills its positioned container. TypeScript requires `sizes` when `fill` is `true`; rendered `width` and `height` attributes are omitted. |
-| `sizes` | Passed to every generated `<source>` and the fallback `<img>`. A non-fill optimized image defaults to `"{metadata width}px"`; a string source has no default. |
+| `sizes` | Passed to every generated `<source>` and the fallback `<img>`. When omitted, the attribute stays absent and the browser uses its `100vw` default for width-descriptor candidates. Provide an accurate value whenever the rendered slot is narrower than the viewport. |
 | `width`, `height` | Override generated dimensions in standard layout. Generated metadata supplies defaults. |
 | `placeholder` | `"empty"` by default. `"blur"` requires optimized data with `blurDataURL`, or a custom `blurDataURL` prop. |
 | `priority` | Sets `loading="eager"` and `fetchPriority="high"`. The package does not call an explicit preload API. |
@@ -211,7 +220,8 @@ import Image, {
 When `placeholder="blur"`, the component renders a presentation-only overlay
 and fades it after the image loads or errors. The prop is available only for
 optimized metadata at the type level. Requesting blur without a data URL also
-throws a runtime `TypeError`.
+throws a runtime `TypeError`. The overlay follows the image's `objectFit` and
+`objectPosition` values.
 
 ## SSR
 
@@ -240,6 +250,7 @@ pnpm install --frozen-lockfile
 pnpm check
 pnpm check:browser
 pnpm package:check
+pnpm release:check
 ```
 
 `pnpm check` runs strict TypeScript checks, ESLint, unit tests, real Vite
@@ -248,6 +259,10 @@ The packed consumer covers TypeScript 5.4, React 18 SSR, and Vite 7. The main
 workspace covers TypeScript 5.9, React 19, and Vite 8. Browser tests run the built
 package in Chromium. `pnpm package:check` runs the build, publint, and
 Are the Types Wrong.
+
+`pnpm release:check` adds the vulnerability audit and npm tarball preview used by
+the publish gate. Maintainers should follow the
+[release checklist](https://github.com/son426/vite-image/blob/main/RELEASING.md).
 
 ## License
 
