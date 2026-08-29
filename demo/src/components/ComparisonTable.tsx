@@ -1,158 +1,143 @@
+import type { ImageMeasurement } from "../hooks/useImageMeasurement";
+
 interface ComparisonTableProps {
-  optimizedSize: number;
-  originalSize: number;
-  optimizedElapsed: number;
-  originalElapsed: number;
+  optimized: ImageMeasurement;
+  original: ImageMeasurement;
+  importedWidth: number;
+  importedHeight: number;
+  refMatchesImage: boolean;
+  hasBlurDataURL: boolean;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "-";
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return "–";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+}
+
+function formatDimensions(measurement: ImageMeasurement): string {
+  if (
+    measurement.naturalWidth === null ||
+    measurement.naturalHeight === null
+  ) {
+    return "–";
+  }
+  return `${measurement.naturalWidth} × ${measurement.naturalHeight}`;
+}
+
+function selectedAsset(url: string | null): string {
+  if (!url) return "–";
+
+  try {
+    const parsed = new URL(url, window.location.href);
+    return parsed.pathname.split("/").at(-1) || parsed.pathname;
+  } catch {
+    return url;
+  }
 }
 
 export default function ComparisonTable({
-  optimizedSize,
-  originalSize,
-  optimizedElapsed,
-  originalElapsed,
+  optimized,
+  original,
+  importedWidth,
+  importedHeight,
+  refMatchesImage,
+  hasBlurDataURL,
 }: ComparisonTableProps) {
   const reduction =
-    originalSize > 0
-      ? Math.round((1 - optimizedSize / originalSize) * 100)
-      : 0;
+    optimized.bytes !== null &&
+    original.bytes !== null &&
+    original.bytes > 0
+      ? Math.round((1 - optimized.bytes / original.bytes) * 100)
+      : null;
 
   const rows = [
     {
-      label: "size",
-      optimized: optimizedSize ? formatBytes(optimizedSize) : "-",
-      original: originalSize ? formatBytes(originalSize) : "-",
-      highlight:
-        optimizedSize && originalSize ? `-${reduction}%` : null,
+      label: "selected response body",
+      optimized: formatBytes(optimized.bytes),
+      original: formatBytes(original.bytes),
+      detail:
+        reduction === null
+          ? null
+          : `${Math.abs(reduction)}% ${reduction >= 0 ? "smaller" : "larger"}`,
     },
     {
-      label: "format",
-      optimized: "webp",
-      original: "jpeg",
-      highlight: null,
+      label: "browser-selected asset",
+      optimized: selectedAsset(optimized.url),
+      original: selectedAsset(original.url),
+      detail: null,
     },
     {
-      label: "srcSet",
-      optimized: "640 / 1024 / 1920w",
-      original: "single",
-      highlight: null,
+      label: "natural dimensions",
+      optimized: formatDimensions(optimized),
+      original: formatDimensions(original),
+      detail: null,
     },
     {
-      label: "placeholder",
-      optimized: "blur lqip",
+      label: "rendered <source> types",
+      optimized:
+        optimized.sourceTypes.length > 0
+          ? optimized.sourceTypes.join(" → ")
+          : "–",
       original: "none",
-      highlight: null,
+      detail: null,
     },
     {
-      label: "time",
-      optimized: optimizedElapsed
-        ? `${(optimizedElapsed / 1000).toFixed(2)}s`
-        : "-",
-      original: originalElapsed
-        ? `${(originalElapsed / 1000).toFixed(2)}s`
-        : "-",
-      highlight: null,
+      label: "imported fallback metadata",
+      optimized: `${importedWidth} × ${importedHeight}`,
+      original: "not generated",
+      detail: null,
+    },
+    {
+      label: "forwarded ref target",
+      optimized: refMatchesImage ? "HTMLImageElement" : "–",
+      original: "native HTMLImageElement",
+      detail: null,
+    },
+    {
+      label: "inline blur metadata",
+      optimized: hasBlurDataURL ? "present" : "absent",
+      original: "none",
+      detail: null,
     },
   ];
 
-  const cellStyle: React.CSSProperties = {
-    padding: "8px 16px",
-    borderBottom: "1px solid #21262d",
-    fontSize: 12,
-    textAlign: "left",
-  };
-
   return (
-    <div style={{ marginTop: 48 }}>
-      <div
-        style={{
-          fontSize: 12,
-          color: "#484f58",
-          marginBottom: 12,
-          letterSpacing: 1,
-          textTransform: "uppercase",
-        }}
-      >
-        // results
-      </div>
-      <div
-        style={{
-          border: "1px solid #21262d",
-          borderRadius: 6,
-          overflow: "hidden",
-        }}
-      >
-        <table
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-          }}
-        >
+    <section className="results-section">
+      <div className="section-label">// observed results</div>
+      <div className="table-scroll">
+        <table>
           <thead>
-            <tr style={{ backgroundColor: "#161b22" }}>
-              <th style={{ ...cellStyle, color: "#484f58", fontWeight: 500 }}>
-                $
-              </th>
-              <th
-                style={{
-                  ...cellStyle,
-                  fontWeight: 600,
-                  color: "#00ff41",
-                }}
-              >
-                vite-image
-              </th>
-              <th
-                style={{
-                  ...cellStyle,
-                  fontWeight: 500,
-                  color: "#484f58",
-                }}
-              >
-                &lt;img&gt;
-              </th>
+            <tr>
+              <th scope="col">observation</th>
+              <th scope="col">vite-image</th>
+              <th scope="col">original</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr
-                key={row.label}
-                style={{
-                  backgroundColor: "#0d1117",
-                }}
-              >
-                <td style={{ ...cellStyle, color: "#484f58" }}>
-                  {row.label}
+              <tr key={row.label}>
+                <th scope="row">{row.label}</th>
+                <td>
+                  <code>{row.optimized}</code>
+                  {row.detail ? (
+                    <span className="result-detail">{row.detail}</span>
+                  ) : null}
                 </td>
-                <td style={{ ...cellStyle, color: "#c9d1d9" }}>
-                  {row.optimized}
-                  {row.highlight && (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        fontSize: 11,
-                        color: "#00ff41",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {row.highlight}
-                    </span>
-                  )}
-                </td>
-                <td style={{ ...cellStyle, color: "#484f58" }}>
-                  {row.original}
+                <td>
+                  <code>{row.original}</code>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </div>
+      <p className="measurement-method">
+        Response body sizes come from <code>fetch(url).blob().size</code> after
+        each image fires <code>load</code>. A dash means the browser could not
+        provide a measurement.
+      </p>
+    </section>
   );
 }

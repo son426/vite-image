@@ -1,7 +1,7 @@
 {
   "name": "@son426/vite-image",
   "version": "1.0.0",
-  "description": "A Vite plugin and React component for optimized images with LQIP support using vite-imagetools",
+  "description": "Build-time responsive image metadata for Vite with a React renderer",
   "type": "module",
   "packageManager": "pnpm@10.14.0",
   "engines": {
@@ -48,8 +48,11 @@
     "test:unit": "vitest run src",
     "test:integration": "vitest run --config vitest.integration.config.ts && node tests/package-consumer.mjs",
     "test:browser": "pnpm run build && playwright test",
+    "demo:lint": "pnpm --dir demo run lint",
+    "demo:build": "pnpm --dir demo run build",
+    "demo:check": "pnpm run demo:lint && pnpm run demo:build",
     "test": "pnpm run test:unit && pnpm run test:integration",
-    "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test && pnpm run demo:check",
     "package:check": "pnpm run build && publint && attw --pack . --profile esm-only",
     "check:browser": "pnpm run test:browser",
     "check:release": "pnpm run check && pnpm run check:browser && pnpm run package:check",

@@ -1,454 +1,261 @@
 # @son426/vite-image
 
-**The Next.js `<Image />` experience, now in Vite.**
+`@son426/vite-image` turns local static images into typed responsive-image
+metadata during a Vite build. Its React component renders that metadata as a
+native `<picture>` and `<img>` tree.
 
-[![Demo](https://img.shields.io/badge/Demo-Live-00ff41?style=flat-square)](https://vite-image.web.app)
-[![npm](https://img.shields.io/npm/v/@son426/vite-image?style=flat-square)](https://www.npmjs.com/package/@son426/vite-image)
+[Live demo](https://vite-image.web.app) ·
+[npm](https://www.npmjs.com/package/@son426/vite-image) ·
+[issues](https://github.com/son426/vite-image/issues)
 
-- **Bring the power of Next.js's automatic image optimization to your Vite projects.**
-- **Dedicated to the Vite + React ecosystem.**
-
-Simply add the plugin to your config, and start using the `<Image />` component immediately. No complex setups, just performant images.
-
-### **[See demo. Feel the difference. →](https://vite-image.web.app)**
-
-## ✨ Why use this?
-
-- **⚡ Next.js-like Experience**: Familiar Image API for those coming from Next.js.
-- **🖼️ Zero-Config Optimization**: Automatic format conversion, resizing, and compression via `vite-imagetools`.
-- **🎨 Built-in LQIP**: Automatic Low Quality Image Placeholders (blur effect) while loading.
-- **📱 Responsive Ready**: Auto-generated `srcSet` and `sizes` for all viewports.
-- **🎯 Type-Safe**: Full TypeScript support with tight integration.
-
----
-
-## At a glance
-
-> `hero.jpg` (2.4 MB) → 3 responsive WebP images (42–148 KB) + inline blur placeholder (820 B). **94% smaller, zero config.**
-
-```diff
-  // vite.config.ts
-  export default defineConfig({
-    plugins: [
-+     viteImage(),
-    ],
-  })
-
-  // Hero.tsx
-- import hero from "./assets/hero.jpg"
-+ import hero from "./assets/hero.jpg?vite-image"
-
-- <img src={hero} alt="Hero" />
-+ <Image src={hero} alt="Hero" placeholder="blur" />
-```
-
-|  | `<img>` | `<Image>` |
-|---|---|---|
-| **Size** | 2.4 MB | 148 KB **(94% ↓)** |
-| **Responsive** | Single size | 640w / 1024w / 1920w |
-| **Placeholder** | Blank | Blur LQIP (instant) |
-| **CLS** | 0.24 | 0 |
-
----
-
-## 🚀 Quick Look
-
-Add it to `vite.config.ts`, and use it like this:
-
-**Option 1: Using query string (default)**
-
-```tsx
-// vite.config.ts
-import { defineConfig } from "vite";
-import { viteImage } from "@son426/vite-image/plugin";
-
-export default defineConfig({
-  plugins: [
-    viteImage(), // Default breakpoints: [640, 1024, 1920]
-  ],
-});
-
-// Component
-import Image from "@son426/vite-image/react";
-import myBg from "./assets/background.jpg?vite-image";
-
-export default function Page() {
-  return (
-    <Image
-      src={myBg}
-      alt="Optimized Background"
-      fill
-      priority
-      placeholder="blur"
-    />
-  );
-}
-```
-
-**Option 2: Auto-apply without query string**
-
-```tsx
-// vite.config.ts
-import { defineConfig } from "vite";
-import { viteImage } from "@son426/vite-image/plugin";
-
-export default defineConfig({
-  plugins: [
-    viteImage({
-      autoApply: {
-        extensions: [".jpg"], // Required — must include the leading dot
-      },
-    }),
-  ],
-});
-
-// Component
-import Image from "@son426/vite-image/react";
-import myBg from "./assets/background.jpg"; // No query needed
-
-export default function Page() {
-  return (
-    <Image
-      src={myBg}
-      alt="Optimized Background"
-      fill
-      priority
-      placeholder="blur"
-    />
-  );
-}
-```
-
-> **Note**: For auto-apply, you'll need to add type declarations. See the [TypeScript Setup](#typescript-setup) section below.
-
-## Installation
-
-Install the package. `vite-imagetools` and `@rollup/pluginutils` are included as dependencies.
-
-```bash
-pnpm add @son426/vite-image
-# or
-npm install @son426/vite-image
-# or
-yarn add @son426/vite-image
-```
+The package opts images in explicitly with `?vite-image`. It generates width
+candidates, ordered AVIF or WebP sources, an input-format fallback, and an
+optional inline blur placeholder. It does not optimize remote URLs at runtime.
 
 ## Requirements
 
-Just a standard Vite + React project.
+- Node.js 22 or newer
+- Vite 7 or 8
+- React and React DOM 18 or 19 when using `@son426/vite-image/react`
+- TypeScript 5.4 or newer for TypeScript projects
+- An ESM project
 
-- vite (>= 4.0.0)
-- react (>= 18.0.0)
-- react-dom (>= 18.0.0)
+## Install
 
-## TypeScript Setup
+```sh
+pnpm add @son426/vite-image
+```
 
-If you are using TypeScript, add the following to your project's type definition file (e.g., `src/vite-env.d.ts`):
+`vite`, `react`, and `react-dom` are peer dependencies. Install the peers your
+application uses.
 
-```typescript
+## Set up the plugin
+
+`viteImage()` returns an array of Vite plugins, so spread it into `plugins`.
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { viteImage } from "@son426/vite-image/plugin";
+
+export default defineConfig({
+  plugins: [
+    react(),
+    ...viteImage({
+      widths: [480, 960, 1440],
+      formats: ["avif", "webp"],
+    }),
+  ],
+});
+```
+
+For TypeScript, include the client declarations in a file covered by your
+`tsconfig.json`:
+
+```ts
+// src/vite-env.d.ts
 /// <reference types="vite/client" />
 /// <reference types="@son426/vite-image/client" />
 ```
 
-This ensures TypeScript recognizes `?vite-image` imports.
+## Import and render an image
 
-## Usage
-
-### 1. Setup Vite Plugin
-
-Add the plugin to your `vite.config.ts`:
-
-```typescript
-import { defineConfig } from "vite";
-import { viteImage } from "@son426/vite-image/plugin";
-
-export default defineConfig({
-  plugins: [
-    viteImage(), // Default: breakpoints [640, 1024, 1920], no autoApply
-  ],
-});
-```
-
-**Default configuration:**
-
-- `breakpoints: [640, 1024, 1920]`
-- `autoApply: undefined` (requires `?vite-image` query)
-
-#### Configuration Options
-
-**Custom breakpoints:**
-
-```typescript
-viteImage({
-  breakpoints: [800, 1200, 1920],
-});
-```
-
-**Auto-apply without query string:**
-
-> **`extensions` is required for autoApply.** Without it, autoApply silently does nothing.
-> Values must include the leading dot and are case-sensitive (e.g., `".jpg"`, not `"jpg"` or `".JPG"`).
-
-```typescript
-viteImage({
-  autoApply: {
-    extensions: [".jpg", ".png", ".webp"], // Required — must include the leading dot
-    include: ["src/assets/**"],            // Optional — glob pattern for file paths
-    exclude: ["src/icons/**"],             // Optional — glob pattern to exclude
-  },
-});
-```
-
-**Note**: `include` and `exclude` patterns are matched against actual image file paths (after alias resolution). For example, `@/assets/image.jpg` resolves to `src/assets/image.jpg`.
-
-**With vite-imagetools options:**
-
-```typescript
-viteImage({
-  breakpoints: [640, 1024, 1920],
-  autoApply: {
-    extensions: [".jpg", ".png"],
-    include: ["src/**"],
-  },
-  imagetools: {
-    // vite-imagetools options
-    defaultDirectives: (url) => {
-      if (url.searchParams.has("vite-image")) {
-        return new URLSearchParams("format=webp");
-      }
-    },
-  },
-});
-```
-
-### 2. Use the Component
-
-#### Using `?vite-image` query
-
-The `?vite-image` query parameter automatically generates all required image data. When using `?vite-image`, the `src` prop must be an object (not a string).
-
-```typescript
-import Image from "@son426/vite-image/react";
-import bgImage from "@/assets/image.webp?vite-image";
-
-function MyComponent() {
-  return <Image src={bgImage} fill={false} alt="Description" />;
-}
-```
-
-**Without query string (autoApply enabled):**
-
-```typescript
-// vite.config.ts
-viteImage({
-  autoApply: {
-    extensions: [".jpg", ".png"], // Required — must include the leading dot
-    include: ["src/assets/**"],
-  },
-});
-
-// Add type declarations for autoApply extensions
-// In your project's vite-env.d.ts or a custom .d.ts file:
-
-interface ResponsiveImageData {
-  src: string;
-  width: number;
-  height: number;
-  srcSet?: string;
-  blurDataURL?: string;
-}
-
-declare module "*.jpg" {
-  const imageData: ResponsiveImageData;
-  export default imageData;
-}
-
-declare module "*.png" {
-  const imageData: ResponsiveImageData;
-  export default imageData;
-}
-
-// Component
-import bgImage from "@/assets/background.jpg"; // No query needed
-<Image src={bgImage} alt="Background" />;
-```
-
-**Important**:
-
-- The `src` prop must receive the imported object directly. String URLs are not supported.
-- When using `autoApply`, you need to add type declarations for the extensions you're using in your project's type definition file (e.g., `vite-env.d.ts`).
-
-The `?vite-image` query (or autoApply) automatically generates:
-
-- `src`: Optimized image URL
-- `srcSet`: Responsive srcSet string
-- `blurDataURL`: Low Quality Image Placeholder (base64 inline)
-- `width` and `height`: Image dimensions
-
-#### Usage Examples
-
-**Basic usage:**
+The exact, valueless `?vite-image` query activates the plugin. No other query
+parameter may accompany it.
 
 ```tsx
 import Image from "@son426/vite-image/react";
-import heroImage from "@/assets/hero.jpg?vite-image";
+import hero from "./assets/hero.jpg?vite-image";
 
-<Image src={heroImage} alt="Hero" />;
+export function Hero() {
+  return <Image src={hero} alt="Mountain landscape" placeholder="blur" />;
+}
 ```
 
-**Fill mode (container-filling images):**
-
-```tsx
-<div style={{ position: "relative", width: "100%", height: "400px" }}>
-  <Image src={bgImage} fill alt="Background" />
-</div>
-```
-
-**With priority (LCP images):**
-
-```tsx
-<Image src={heroImage} alt="Hero" priority />
-```
-
-**With blur placeholder:**
-
-```tsx
-<Image src={heroImage} alt="Hero" placeholder="blur" />
-```
-
-**Without placeholder:**
-
-```tsx
-<Image src={heroImage} alt="Hero" placeholder="empty" />
-```
-
-**Custom data URL placeholder:**
-
-```tsx
-<Image src={heroImage} alt="Hero" placeholder="data:image/jpeg;base64,..." />
-```
-
-**Custom sizes:**
-
-```tsx
-<Image src={heroImage} alt="Hero" sizes="(max-width: 768px) 100vw, 50vw" />
-```
-
-**With onLoad and onError callbacks:**
+The component accepts a string URL as a native pass-through source. String
+sources do not support the generated blur placeholder.
 
 ```tsx
 <Image
-  src={heroImage}
-  alt="Hero"
-  onLoad={(e) => console.log("Image loaded", e)}
-  onError={(e) => console.error("Image failed to load", e)}
+  src="/images/hero.jpg"
+  srcSet="/images/hero-640.jpg 640w, /images/hero-1280.jpg 1280w"
+  sizes="(max-width: 700px) 100vw, 700px"
+  width={1280}
+  height={720}
+  alt="Mountain landscape"
 />
 ```
 
-**With decoding:**
+### Fill layout
+
+`fill` requires an explicit `sizes` value. Give the containing element a
+positioning context and set cropping or fitting through the image's `style`.
 
 ```tsx
-<Image src={heroImage} alt="Hero" decoding="sync" />
-```
-
-**With overrideSrc (SEO optimization):**
-
-```tsx
-<Image
-  src={heroImage}
-  alt="Hero"
-  overrideSrc="/original-image.jpg"
-/>
-```
-
-> **Note**: When `overrideSrc` is provided, the `src` attribute uses the override value for SEO purposes, while the optimized `srcSet` is disabled. Placeholders are also disabled when using `overrideSrc`.
-
-**Combined usage:**
-
-```tsx
-<div style={{ position: "relative", width: "100%", height: "600px" }}>
+<div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9" }}>
   <Image
-    src={heroImage}
-    alt="Hero"
+    src={hero}
+    alt="Mountain landscape"
     fill
-    priority
+    sizes="(max-width: 768px) 100vw, 960px"
     placeholder="blur"
-    className="rounded-lg"
-    onLoad={(e) => console.log("Loaded")}
+    style={{ objectFit: "cover" }}
   />
 </div>
 ```
 
-## API
+## Plugin API
 
-### Image Props
+```ts
+interface ViteImageConfig {
+  widths?: readonly number[];
+  formats?: readonly ("avif" | "webp")[];
+  quality?: number;
+  placeholder?:
+    | false
+    | {
+        width?: number;
+        quality?: number;
+        blur?: number;
+      };
+  cache?:
+    | false
+    | {
+        dir?: string;
+        retention?: number;
+      };
+  removeMetadata?: boolean;
+}
+```
 
-| Prop          | Type                                                      | Required | Default   | Description                                                             |
-| ------------- | --------------------------------------------------------- | -------- | --------- | ----------------------------------------------------------------------- |
-| `src`         | `ResponsiveImageData`                                     | Yes      | -         | Image data object from `?vite-image` query or `autoApply`               |
-| `fill`        | `boolean`                                                 | No       | `false`   | Fill container mode (requires parent with `position: relative`)         |
-| `sizes`       | `string`                                                  | No       | auto      | Sizes attribute (auto-calculated from srcSet if not provided)           |
-| `priority`    | `boolean`                                                 | No       | `false`   | High priority loading (preload + eager + fetchPriority high)            |
-| `placeholder` | `'empty' \| 'blur' \| string`                             | No       | `'empty'` | Placeholder type: `'empty'` (none), `'blur'` (blurDataURL), or data URL |
-| `decoding`    | `'async' \| 'sync' \| 'auto'`                              | No       | `'async'` | Image decoding strategy (Next.js Image compatible)                      |
-| `overrideSrc` | `string`                                                   | No       | -         | Override src attribute for SEO while using optimized images            |
-| `onLoad`      | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image loads successfully                            |
-| `onError`     | `(event: React.SyntheticEvent<HTMLImageElement>) => void` | No       | -         | Callback fired when image fails to load                                 |
-| `className`   | `string`                                                  | No       | -         | Additional CSS classes                                                  |
-| `style`       | `CSSProperties`                                           | No       | -         | Additional inline styles                                                |
-| `...props`    | `ImgHTMLAttributes`                                       | No       | -         | All standard img element attributes                                     |
+| Option | Default | Rules |
+| --- | --- | --- |
+| `widths` | `[640, 1024, 1920]` | Non-empty, strictly increasing positive integers. Widths above the input's intrinsic width are clamped and deduplicated. |
+| `formats` | `["webp"]` | Non-empty ordered list containing `"avif"` or `"webp"`, without duplicates. |
+| `quality` | `80` | Integer from 1 through 100. Applies to responsive output, including the input-format fallback. |
+| `placeholder` | `{ width: 20, quality: 20, blur: 2 }` | Set to `false` to omit `blurDataURL`. `width` must be a positive integer, `quality` must be from 1 through 100, and `blur` must be from 0.3 through 1000. |
+| `cache` | Enabled at `./node_modules/.cache/imagetools`, without expiry | Set to `false` to disable the transform cache. `dir` must be non-empty; `retention` is a non-negative integer in seconds. |
+| `removeMetadata` | `true` | Removes source metadata from transformed output when enabled. |
 
-**Notes**:
+Configuration is validated when Vite loads the plugin. Unknown keys, unsupported
+formats, duplicate values, and out-of-range numbers throw a `TypeError` instead
+of falling back silently.
 
-- The `src` prop must be an object imported from `?vite-image` query or via `autoApply`. String URLs are not supported.
-- The `width` and `height` are automatically extracted from the `src` object.
-- When `priority={true}`, the image is preloaded using `react-dom`'s `preload` API and loaded with `loading="eager"` and `fetchPriority="high"`.
-- When `sizes` is not provided, it's automatically calculated from `srcSet` breakpoints.
-- When `overrideSrc` is provided, the `src` attribute uses the override value (useful for SEO), while `srcSet` and `sizes` are disabled. Placeholders are also disabled.
-- The `decoding` prop controls how the browser decodes the image: `"async"` (default, non-blocking), `"sync"` (blocking), or `"auto"` (browser decides).
+Supported input extensions are `.jpg`, `.jpeg`, `.png`, `.webp`, and `.avif`.
+SVG, GIF, BMP, and files without a supported extension are rejected.
 
-### ResponsiveImageData
+### Output order and fallback
 
-The type returned from `?vite-image` query or `autoApply`:
+The plugin preserves the configured format order in `<source>` elements. It
+moves the input format to the fallback position and avoids duplicating that
+format as a `<source>`. For example, a JPEG imported with
+`formats: ["avif", "webp"]` renders AVIF first, WebP second, and responsive JPEG
+candidates on the fallback `<img>`.
 
-```typescript
-interface ResponsiveImageData {
+Transforms never upscale an image. If the largest configured width exceeds the
+input width, the intrinsic width becomes the final candidate.
+
+## Generated data
+
+Import types from the package root:
+
+```ts
+import type {
+  OptimizedImageData,
+  OptimizedImageSource,
+} from "@son426/vite-image";
+
+interface OptimizedImageSource {
+  type: string;
+  srcSet: string;
+}
+
+interface OptimizedImageData {
   src: string;
   width: number;
   height: number;
   srcSet?: string;
-  blurDataURL?: string; // Base64 encoded blur placeholder (Next.js Image compatible)
+  sources?: OptimizedImageSource[];
+  blurDataURL?: string;
 }
 ```
 
-## TypeScript
+- `src`, `width`, and `height` describe the largest generated input-format
+  fallback.
+- `srcSet` contains fallback candidates.
+- `sources` contains ordered MIME types and candidate sets for configured output
+  formats.
+- `blurDataURL` is an inline WebP data URL unless `placeholder` is `false`.
 
-Type definitions are included. The package also extends vite-imagetools types for better TypeScript support:
+## React API
 
-```typescript
-import Image from "@son426/vite-image/react";
-import type { ImageProps } from "@son426/vite-image/react";
+```ts
+import Image, {
+  Image as NamedImage,
+  type ImageProps,
+} from "@son426/vite-image/react";
 ```
 
-**Note**: When using `autoApply` with custom extensions, you need to define the `ResponsiveImageData` interface in your type definition file (as shown in the "Without query string" section above) since `.d.ts` files cannot use imports.
+`Image` accepts native image attributes except the fields it controls directly.
+`alt` is always required.
 
-## How It Works
+| Prop | Behavior |
+| --- | --- |
+| `src` | Accepts `OptimizedImageData` or a string URL. A string source may use native `srcSet`, `sizes`, `width`, and `height`. |
+| `fill` | Fills its positioned container. TypeScript requires `sizes` when `fill` is `true`; rendered `width` and `height` attributes are omitted. |
+| `sizes` | Passed to every generated `<source>` and the fallback `<img>`. A non-fill optimized image defaults to `"{metadata width}px"`; a string source has no default. |
+| `width`, `height` | Override generated dimensions in standard layout. Generated metadata supplies defaults. |
+| `placeholder` | `"empty"` by default. `"blur"` requires optimized data with `blurDataURL`, or a custom `blurDataURL` prop. |
+| `priority` | Sets `loading="eager"` and `fetchPriority="high"`. The package does not call an explicit preload API. |
+| `loading` | Defaults to `"lazy"` unless `priority` is set. |
+| `decoding` | Defaults to `"async"`. |
+| `className`, `style` | Apply to the real `<img>`. No `object-fit` value is imposed. |
+| `wrapperClassName`, `wrapperStyle` | Apply to the component's wrapper `<span>`. |
+| `ref` | Forwards to the real `HTMLImageElement`. |
+| `onLoad`, `onError` | Receive native React image events. Either event settles the blur overlay. |
 
-1. **Image Processing**: When you import an image with `?vite-image` query or via `autoApply`, the plugin automatically generates:
+When `placeholder="blur"`, the component renders a presentation-only overlay
+and fades it after the image loads or errors. The prop is available only for
+optimized metadata at the type level. Requesting blur without a data URL also
+throws a runtime `TypeError`.
 
-   - Responsive srcSet (default: 640px, 1024px, 1920px widths, customizable via `breakpoints`)
-   - Image metadata (largest breakpoint width)
-   - Blur placeholder (20px width, blurred, low quality, inline base64 as `blurDataURL`)
+## SSR
 
-2. **Image Component**: The `<Image />` component handles:
-   - Automatic `sizes` calculation from `srcSet` breakpoints
-   - Placeholder display (`blur`, `empty`, or custom data URL)
-   - Priority loading with `react-dom`'s `preload` API when `priority={true}`
-   - Responsive image loading with srcSet
-   - Proper aspect ratio maintenance
-   - Fill mode for container-filling images
+The React component renders on the server with React 18 and React 19. It does not
+import browser globals or React DOM preload APIs. The Vite plugin still performs
+image processing during development and builds; no image work runs in the SSR
+request path.
+
+## Limitations
+
+- Only local static files imported at build time can be transformed.
+- Remote and public URLs pass through as strings; the package does not download,
+  cache, or optimize them.
+- SVG and animated GIF inputs are outside the transform pipeline.
+- The package is not a runtime image CDN and does not negotiate formats on a
+  server.
+- You remain responsible for an accurate `sizes` expression. Browser selection
+  can over-fetch when `sizes` overstates the rendered width.
+- `fill` controls layout, not cropping. Set `objectFit` and `objectPosition` on
+  `style` when needed.
+
+## Development and verification
+
+```sh
+pnpm install --frozen-lockfile
+pnpm check
+pnpm check:browser
+pnpm package:check
+```
+
+`pnpm check` runs strict TypeScript checks, ESLint, unit tests, real Vite
+integration tests, a packed consumer test, and the demo's lint and build gates.
+The packed consumer covers TypeScript 5.4, React 18 SSR, and Vite 7. The main
+workspace covers TypeScript 5.9, React 19, and Vite 8. Browser tests run the built
+package in Chromium. `pnpm package:check` runs the build, publint, and
+Are the Types Wrong.
 
 ## License
 
-MIT
-
+[MIT](./LICENSE)
