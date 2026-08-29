@@ -55,6 +55,10 @@ try {
     "./plugin",
     "./react",
   ]);
+  assert.deepEqual(packedManifest.peerDependenciesMeta, {
+    react: { optional: true },
+    "react-dom": { optional: true },
+  });
   assert.equal(packedManifest.exports["./client"].types, "./client.d.ts");
   await Promise.all([
     readFile(join(packedRoot, "dist/index.js")),

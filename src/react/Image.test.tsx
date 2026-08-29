@@ -2,7 +2,7 @@
 
 import { createRef, version as reactVersion } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { OptimizedImageData } from "../types";
@@ -248,6 +248,29 @@ describe("Image DOM semantics", () => {
     fireEvent.error(getByAltText("Next"));
     expect(onError).toHaveBeenCalledTimes(1);
     expect(getOverlay()?.style.opacity).toBe("0");
+  });
+
+  it("hydration 전에 이미 완료된 이미지의 blur overlay를 숨긴다", async () => {
+    const complete = vi
+      .spyOn(HTMLImageElement.prototype, "complete", "get")
+      .mockReturnValue(true);
+
+    try {
+      const { container } = render(
+        <Image
+          src={optimizedImage}
+          alt="Cached hero"
+          placeholder="blur"
+        />,
+      );
+      const overlay = container.querySelector<HTMLImageElement>(
+        'img[aria-hidden="true"]',
+      );
+
+      await waitFor(() => expect(overlay?.style.opacity).toBe("0"));
+    } finally {
+      complete.mockRestore();
+    }
   });
 
   it("forwarded ref와 native handlers가 실제 img를 가리킨다", () => {

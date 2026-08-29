@@ -27,7 +27,7 @@ pnpm add @son426/vite-image
 ```
 
 `vite`, `react`, and `react-dom` are peer dependencies. Install the peers your
-application uses.
+application uses. The React peers are optional for plugin-only projects.
 
 ## Set up the plugin
 

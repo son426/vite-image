@@ -1,5 +1,8 @@
 import {
   forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
   useState,
   version as reactVersion,
   type ComponentPropsWithoutRef,
@@ -132,7 +135,16 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
   const blurDataURL = optimized
     ? (customBlurDataURL ?? src.blurDataURL)
     : undefined;
+  const imageRef = useRef<HTMLImageElement>(null);
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+
+  useImperativeHandle(ref, () => imageRef.current as HTMLImageElement);
+
+  useEffect(() => {
+    if (imageRef.current?.complete) {
+      setLoadedSrc(currentSrc);
+    }
+  }, [currentSrc]);
 
   if (placeholderMode === "blur" && !blurDataURL) {
     throw new TypeError(
@@ -156,7 +168,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
     <img
       {...imageProps}
       {...fetchPriorityProps}
-      ref={ref}
+      ref={imageRef}
       src={currentSrc}
       srcSet={currentSrcSet}
       sizes={currentSizes}
