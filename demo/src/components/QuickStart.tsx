@@ -26,7 +26,16 @@ export default defineConfig({
 import hero from "./hero.jpg?vite-image"
 
 export function Hero() {
-  return <Image src={hero} alt="Mountain landscape" placeholder="blur" />
+  return (
+    <Image
+      src={hero}
+      alt="Mountain landscape"
+      sizes="(max-width: 768px) 100vw, 768px"
+      placeholder="blur"
+      style={{ display: "block", width: "100%", height: "auto" }}
+      wrapperStyle={{ display: "block", width: "100%", maxWidth: 768 }}
+    />
+  )
 }`,
   },
 ];

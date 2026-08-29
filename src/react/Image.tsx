@@ -127,7 +127,7 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
   const optimized = isOptimizedImage(src);
   const currentSrc = optimized ? src.src : src;
   const currentSrcSet = optimized ? src.srcSet : srcSet;
-  const currentSizes = sizes ?? (optimized ? `${src.width}px` : undefined);
+  const currentSizes = sizes;
   const currentWidth = optimized ? (width ?? src.width) : width;
   const currentHeight = optimized ? (height ?? src.height) : height;
   const sources = optimized ? src.sources : undefined;
@@ -221,6 +221,8 @@ export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
             inset: 0,
             width: "100%",
             height: "100%",
+            objectFit: style?.objectFit,
+            objectPosition: style?.objectPosition,
             filter: "blur(20px)",
             transform: "scale(1.1)",
             transition: "opacity 300ms ease-out",

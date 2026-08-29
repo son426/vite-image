@@ -1,5 +1,6 @@
 import { type PreviewServer, build, preview } from "vite";
 import { expect, test } from "@playwright/test";
+import sharp from "sharp";
 
 import { viteImage } from "../../src/plugin";
 import type { OptimizedImageData } from "../../src/types";
@@ -15,7 +16,10 @@ let server: PreviewServer;
 let applicationUrl: string;
 
 test.beforeAll(async () => {
-  fixture = await createImageFixture("vite-image-test-browser-");
+  fixture = await createImageFixture("vite-image-test-browser-", {
+    width: 1920,
+    height: 1080,
+  });
   await linkConsumerDependencies(fixture.root);
   await writeFixtureFile(
     fixture.root,
@@ -52,6 +56,15 @@ function App() {
         wrapperClassName="hero-frame"
         wrapperStyle={{ backgroundColor: "rgb(1, 2, 3)" }}
       />
+      <Image
+        src={hero}
+        alt="Responsive default hero"
+        priority
+        className="responsive-default-image"
+        style={{ width: "100%", height: "auto" }}
+        wrapperClassName="responsive-default-frame"
+        wrapperStyle={{ display: "block", width: "100%" }}
+      />
     </main>
   );
 }
@@ -67,7 +80,7 @@ createRoot(document.getElementById("root")!).render(<App />);
     logLevel: "silent",
     plugins: [
       viteImage({
-        widths: [2, 4, 8],
+        widths: [4, 640, 1024, 1920],
         formats: ["avif", "webp"],
         placeholder: { width: 2, quality: 20, blur: 1 },
       }),
@@ -124,7 +137,7 @@ test("loads picture output and preserves DOM semantics through blur lifecycle", 
     await expect(page.locator("#ref-state")).toHaveText("attached");
     await expect(overlay).toHaveCSS("opacity", "1");
 
-    const sourceTypes = await page
+    const sourceTypes = await wrapper
       .locator("picture source")
       .evaluateAll((sources) => sources.map((source) => source.getAttribute("type")));
     expect(sourceTypes).toEqual(["image/avif", "image/webp"]);
@@ -134,8 +147,8 @@ test("loads picture output and preserves DOM semantics through blur lifecycle", 
         (window as unknown as Window & { __IMAGE_DATA__: OptimizedImageData })
           .__IMAGE_DATA__,
     );
-    expect(imageData.width).toBe(6);
-    expect(imageData.height).toBe(4);
+    expect(imageData.width).toBe(1920);
+    expect(imageData.height).toBe(1080);
     expect(imageData.blurDataURL).toMatch(/^data:image\/webp;base64,/);
     expect(imageData.sources?.map((source) => source.type)).toEqual([
       "image/avif",
@@ -160,4 +173,56 @@ test("loads picture output and preserves DOM semantics through blur lifecycle", 
   expect(naturalHeight).toBeGreaterThan(0);
   expect(naturalHeight).toBeLessThanOrEqual(4);
   await expect(overlay).toHaveCSS("opacity", "0");
+});
+
+test("selects a responsive candidate from viewport width and DPR when sizes is omitted", async ({
+  browser,
+}) => {
+  const cases = [
+    { viewportWidth: 375, deviceScaleFactor: 1, expectedWidth: 640 },
+    { viewportWidth: 375, deviceScaleFactor: 2, expectedWidth: 1024 },
+    { viewportWidth: 768, deviceScaleFactor: 1, expectedWidth: 1024 },
+    { viewportWidth: 768, deviceScaleFactor: 2, expectedWidth: 1920 },
+    { viewportWidth: 1440, deviceScaleFactor: 1, expectedWidth: 1920 },
+    { viewportWidth: 1440, deviceScaleFactor: 2, expectedWidth: 1920 },
+  ];
+
+  for (const testCase of cases) {
+    const context = await browser.newContext({
+      viewport: { width: testCase.viewportWidth, height: 900 },
+      deviceScaleFactor: testCase.deviceScaleFactor,
+    });
+
+    try {
+      const page = await context.newPage();
+      await page.goto(applicationUrl);
+      const image = page.getByAltText("Responsive default hero");
+      await image.scrollIntoViewIfNeeded();
+      await expect(image).not.toHaveAttribute("sizes");
+      await expect(
+        page.locator("span.responsive-default-frame source").first(),
+      ).not.toHaveAttribute("sizes");
+      await expect
+        .poll(() =>
+          image.evaluate((element: HTMLImageElement) => ({
+            complete: element.complete,
+            currentSrc: element.currentSrc,
+          })),
+        )
+        .toMatchObject({ complete: true });
+
+      const currentSrc = await image.evaluate(
+        (element: HTMLImageElement) => element.currentSrc,
+      );
+      const response = await fetch(currentSrc);
+      expect(response.ok).toBe(true);
+      const metadata = await sharp(
+        Buffer.from(await response.arrayBuffer()),
+      ).metadata();
+
+      expect(metadata.width).toBe(testCase.expectedWidth);
+    } finally {
+      await context.close();
+    }
+  }
 });

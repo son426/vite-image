@@ -14,7 +14,15 @@ export interface ImageFixture {
   cleanup: () => Promise<void>;
 }
 
-export async function createImageFixture(prefix: string): Promise<ImageFixture> {
+interface ImageFixtureOptions {
+  width?: number;
+  height?: number;
+}
+
+export async function createImageFixture(
+  prefix: string,
+  { width = 6, height = 4 }: ImageFixtureOptions = {},
+): Promise<ImageFixture> {
   const root = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   const sourceDirectory = join(root, "src");
   const pngPath = join(sourceDirectory, "hero.png");
@@ -22,8 +30,8 @@ export async function createImageFixture(prefix: string): Promise<ImageFixture> 
 
   await mkdir(sourceDirectory, { recursive: true });
 
-  const pixels = Buffer.alloc(6 * 4 * 4);
-  for (let index = 0; index < 6 * 4; index += 1) {
+  const pixels = Buffer.alloc(width * height * 4);
+  for (let index = 0; index < width * height; index += 1) {
     const offset = index * 4;
     pixels[offset] = (index * 31) % 256;
     pixels[offset + 1] = (index * 47) % 256;
@@ -32,7 +40,7 @@ export async function createImageFixture(prefix: string): Promise<ImageFixture> 
   }
 
   const image = sharp(pixels, {
-    raw: { width: 6, height: 4, channels: 4 },
+    raw: { width, height, channels: 4 },
   });
   await Promise.all([
     image.clone().png().toFile(pngPath),

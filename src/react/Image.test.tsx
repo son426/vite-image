@@ -90,13 +90,13 @@ describe("Image DOM semantics", () => {
     expect(getByAltText("Hero").getAttribute("srcset")).toBe(optimizedImage.srcSet);
   });
 
-  it("standard optimized image의 기본 sizes와 intrinsic dimension을 사용한다", () => {
+  it("standard optimized image는 sizes를 생략하고 intrinsic dimension을 사용한다", () => {
     const { getByAltText } = render(
       <Image src={optimizedImage} alt="Hero" />,
     );
     const image = getByAltText("Hero");
 
-    expect(image.getAttribute("sizes")).toBe("1280px");
+    expect(image.hasAttribute("sizes")).toBe(false);
     expect(image.getAttribute("width")).toBe("1280");
     expect(image.getAttribute("height")).toBe("720");
     expect(image.getAttribute("loading")).toBe("lazy");
@@ -222,6 +222,7 @@ describe("Image DOM semantics", () => {
         src={optimizedImage}
         alt="Hero"
         placeholder="blur"
+        style={{ objectFit: "cover", objectPosition: "center top" }}
         onLoad={onLoad}
         onError={onError}
       />,
@@ -229,6 +230,8 @@ describe("Image DOM semantics", () => {
     const getOverlay = () => container.querySelector<HTMLImageElement>('img[aria-hidden="true"]');
 
     expect(getOverlay()?.style.opacity).toBe("1");
+    expect(getOverlay()?.style.objectFit).toBe("cover");
+    expect(getOverlay()?.style.objectPosition).toBe("center top");
     fireEvent.load(getByAltText("Hero"));
     expect(onLoad).toHaveBeenCalledTimes(1);
     expect(getOverlay()?.style.opacity).toBe("0");
