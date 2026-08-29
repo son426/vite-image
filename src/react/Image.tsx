@@ -1,263 +1,226 @@
-import { useState, useEffect, type ImgHTMLAttributes, type CSSProperties } from "react";
-import { preload } from "react-dom";
-import type { ResponsiveImageData } from "../types";
+import {
+  forwardRef,
+  useState,
+  version as reactVersion,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ImgHTMLAttributes,
+  type ReactElement,
+} from "react";
 
-// placeholder 타입 정의 (Next.js Image 호환)
-type PlaceholderValue = "empty" | "blur" | `data:image/${string}`;
+import type { OptimizedImageData } from "../types";
 
-// ?vite-image import 결과 타입
-interface BaseImageProps
-  extends Omit<
-    ImgHTMLAttributes<HTMLImageElement>,
-    "src" | "srcSet" | "width" | "height"
-  > {
-  // 핵심 변경: src는 무조건 최적화된 이미지 객체만 받음
-  src: ResponsiveImageData;
-  sizes?: string; // Optional: 제공되지 않으면 자동 계산
-  placeholder?: PlaceholderValue; // Next.js Image 호환: 'empty' | 'blur' | 'data:image/...'
-  blurDataURL?: string; // Optional: 커스텀 blur placeholder (src.blurDataURL보다 우선)
-  loading?: "lazy" | "eager"; // Next.js Image 호환: 이미지 로딩 방식
-  priority?: boolean; // Next.js Image 호환: true일 경우 높은 우선순위로 preload
-  decoding?: "async" | "sync" | "auto"; // Next.js Image 호환: 이미지 디코딩 방식
-  overrideSrc?: string; // Next.js Image 호환: SEO를 위해 src 속성을 유지하면서 최적화된 이미지 사용
-  onLoad?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
-  onError?: (event: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+type NativeImageProps = Omit<
+  ComponentPropsWithoutRef<"img">,
+  | "alt"
+  | "src"
+  | "srcSet"
+  | "sizes"
+  | "width"
+  | "height"
+  | "loading"
+  | "decoding"
+>;
+
+interface SharedImageProps extends NativeImageProps {
+  alt: string;
+  priority?: boolean;
+  fetchPriority?: "high" | "low" | "auto";
+  wrapperClassName?: string;
+  wrapperStyle?: CSSProperties;
+  loading?: ImgHTMLAttributes<HTMLImageElement>["loading"];
+  decoding?: ImgHTMLAttributes<HTMLImageElement>["decoding"];
 }
 
-interface FillImageProps extends BaseImageProps {
-  fill: true;
-}
-
-interface StandardImageProps extends BaseImageProps {
+interface StandardLayoutProps {
   fill?: false | undefined;
+  sizes?: string;
+  width?: string | number;
+  height?: string | number;
 }
 
-export type ImageProps = FillImageProps | StandardImageProps;
-
-/**
- * srcSet에서 breakpoints를 추출하여 sizes 문자열을 자동 생성
- * @param srcSet - "url1 640w, url2 1024w, url3 1920w" 형식의 문자열
- * @returns sizes 속성 문자열
- */
-function generateSizesFromSrcSet(srcSet?: string): string {
-  if (!srcSet) {
-    return "100vw";
-  }
-
-  // srcSet에서 width 값들 추출 (예: "640w", "1024w", "1920w")
-  const widthMatches = srcSet.match(/(\d+)w/g);
-  if (!widthMatches || widthMatches.length === 0) {
-    return "100vw";
-  }
-
-  // width 값들을 숫자로 변환하고 정렬
-  const breakpoints = widthMatches
-    .map((match) => parseInt(match.replace("w", ""), 10))
-    .sort((a, b) => a - b);
-
-  if (breakpoints.length === 0) {
-    return "100vw";
-  }
-
-  // breakpoints를 기반으로 sizes 문자열 생성
-  // 예: "(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
-  const sizeParts: string[] = [];
-
-  for (let i = 0; i < breakpoints.length; i++) {
-    const breakpoint = breakpoints[i];
-    if (i === breakpoints.length - 1) {
-      // 마지막 breakpoint는 최대 크기로 설정
-      sizeParts.push(`${breakpoint}px`);
-    } else {
-      // 중간 breakpoint들은 미디어 쿼리로 설정
-      sizeParts.push(`(max-width: ${breakpoint}px) 100vw`);
-    }
-  }
-
-  return sizeParts.join(", ");
+interface FillLayoutProps {
+  fill: true;
+  sizes: string;
+  width?: string | number;
+  height?: string | number;
 }
 
-export default function Image({
-  src, // 이제 이 src는 객체입니다.
-  fill = false,
-  sizes,
-  placeholder = "empty", // 기본값: empty (Next.js Image 호환)
-  blurDataURL: customBlurDataURL, // 사용자가 직접 제공한 blurDataURL (우선순위 높음)
-  loading, // loading prop (priority보다 낮은 우선순위)
-  priority = false, // 기본값: false (Next.js Image 호환)
-  decoding = "async", // 기본값: async (Next.js Image 호환)
-  overrideSrc, // Next.js Image 호환: SEO를 위해 src 속성을 유지하면서 최적화된 이미지 사용
-  className = "",
-  style,
-  onLoad,
-  onError,
-  ...props
-}: ImageProps) {
-  const [isImageLoaded, setIsImageLoaded] = useState(false);
-  const [isPlaceholderRemoved, setIsPlaceholderRemoved] = useState(false);
+interface OptimizedSourceProps {
+  src: OptimizedImageData;
+  srcSet?: never;
+  placeholder?: "empty" | "blur";
+  blurDataURL?: string;
+}
 
-  // 1. 데이터 추출: src 객체에서 바로 꺼내씀 (병합 로직 제거)
-  const {
-    src: currentSrc,
-    srcSet: currentSrcSet,
-    blurDataURL: srcBlurDataURL, // 번들러가 생성한 blurDataURL
-    width: currentWidth,
-    height: currentHeight,
-  } = src;
+interface StringSourceProps {
+  src: string;
+  srcSet?: string;
+  placeholder?: never;
+  blurDataURL?: never;
+}
 
-  // src 변경 시 상태 리셋 (이미지 스왑, 캐러셀 등)
-  const [prevSrc, setPrevSrc] = useState(currentSrc);
-  if (prevSrc !== currentSrc) {
-    setPrevSrc(currentSrc);
-    setIsImageLoaded(false);
-    setIsPlaceholderRemoved(false);
+export type ImageProps = SharedImageProps &
+  (StandardLayoutProps | FillLayoutProps) &
+  (OptimizedSourceProps | StringSourceProps);
+
+const STANDARD_WRAPPER_STYLE: CSSProperties = {
+  position: "relative",
+  display: "inline-block",
+  overflow: "hidden",
+  lineHeight: 0,
+};
+
+const FILL_WRAPPER_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  overflow: "hidden",
+  lineHeight: 0,
+};
+
+const FILL_IMAGE_STYLE: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+};
+
+const FETCH_PRIORITY_PROPERTY = reactVersion.startsWith("18.")
+  ? "fetchpriority"
+  : "fetchPriority";
+
+function isOptimizedImage(
+  src: OptimizedImageData | string,
+): src is OptimizedImageData {
+  return typeof src !== "string";
+}
+
+/** Renders optimized image metadata or a native image URL with the same API. */
+export const Image = forwardRef<HTMLImageElement, ImageProps>(function Image(
+  {
+    src,
+    srcSet,
+    sizes,
+    width,
+    height,
+    fill = false,
+    placeholder,
+    blurDataURL: customBlurDataURL,
+    priority = false,
+    loading,
+    decoding = "async",
+    fetchPriority,
+    alt,
+    className,
+    style,
+    wrapperClassName,
+    wrapperStyle,
+    onLoad,
+    onError,
+    ...imageProps
+  },
+  ref,
+) {
+  const optimized = isOptimizedImage(src);
+  const currentSrc = optimized ? src.src : src;
+  const currentSrcSet = optimized ? src.srcSet : srcSet;
+  const currentSizes = sizes ?? (optimized ? `${src.width}px` : undefined);
+  const currentWidth = optimized ? (width ?? src.width) : width;
+  const currentHeight = optimized ? (height ?? src.height) : height;
+  const sources = optimized ? src.sources : undefined;
+  const placeholderMode = optimized ? (placeholder ?? "empty") : "empty";
+  const blurDataURL = optimized
+    ? (customBlurDataURL ?? src.blurDataURL)
+    : undefined;
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+
+  if (placeholderMode === "blur" && !blurDataURL) {
+    throw new TypeError(
+      '[vite-image] placeholder="blur" requires a blurDataURL prop or optimized image metadata',
+    );
   }
 
-  // blurDataURL 우선순위: prop으로 제공된 것 > src 객체의 것
-  const blurDataURL = customBlurDataURL ?? srcBlurDataURL;
-
-  // 2. loading 속성 결정: 우선순위 priority > loading prop > 기본값('lazy')
-  const loadingAttr = priority ? "eager" : loading ?? "lazy";
-
-  // 3. overrideSrc 처리: SEO를 위해 src 속성을 유지하면서 최적화된 이미지 사용
-  const finalSrc = overrideSrc ?? currentSrc;
-
-  // 4. sizes 자동 계산: 제공되지 않으면 srcSet 기반으로 자동 생성
-  const computedSizes =
-    sizes ?? (fill ? "100vw" : generateSizesFromSrcSet(currentSrcSet));
-
-  // 5. Priority 처리: priority={true}일 때 preload
-  // preload()는 렌더 중 호출하도록 설계된 API (paint 전에 fetch 시작)
-  // React 18에서는 preload가 없으므로 가드 필요 (graceful degradation)
-  if (priority && currentSrc && typeof preload === "function") {
-    preload(currentSrc, {
-      as: "image",
-      fetchPriority: "high",
-      ...(currentSrcSet ? { imageSrcSet: currentSrcSet } : {}),
-      ...(computedSizes ? { imageSizes: computedSizes } : {}),
-    });
-  }
-
-  // 6. placeholder 처리 (Next.js Image 호환) - overrideSrc가 있으면 placeholder 비활성화
-  const getPlaceholderSrc = (): string | undefined => {
-    // overrideSrc가 있으면 placeholder를 표시하지 않음
-    if (overrideSrc) {
-      return undefined;
-    }
-    if (placeholder === "empty") {
-      return undefined;
-    }
-    if (placeholder === "blur") {
-      return blurDataURL;
-    }
-    // data:image/... 형식의 직접 제공된 placeholder
-    if (placeholder.startsWith("data:image/")) {
-      return placeholder;
-    }
-    // 기본값: empty
-    return undefined;
+  const imageSettled = loadedSrc === currentSrc;
+  const imageStyle = fill ? { ...FILL_IMAGE_STYLE, ...style } : style;
+  const mergedWrapperStyle = {
+    ...(fill ? FILL_WRAPPER_STYLE : STANDARD_WRAPPER_STYLE),
+    ...wrapperStyle,
   };
+  const loadingValue = priority ? "eager" : (loading ?? "lazy");
+  const fetchPriorityValue = priority ? "high" : fetchPriority;
+  const fetchPriorityProps = fetchPriorityValue
+    ? { [FETCH_PRIORITY_PROPERTY]: fetchPriorityValue }
+    : {};
 
-  const placeholderSrc = getPlaceholderSrc();
-  const hasShowPlaceholder = !!placeholderSrc;
+  const image = (
+    <img
+      {...imageProps}
+      {...fetchPriorityProps}
+      ref={ref}
+      src={currentSrc}
+      srcSet={currentSrcSet}
+      sizes={currentSizes}
+      width={fill ? undefined : currentWidth}
+      height={fill ? undefined : currentHeight}
+      alt={alt}
+      loading={loadingValue}
+      decoding={decoding}
+      className={className}
+      style={imageStyle}
+      onLoad={(event) => {
+        setLoadedSrc(currentSrc);
+        onLoad?.(event);
+      }}
+      onError={(event) => {
+        setLoadedSrc(currentSrc);
+        onError?.(event);
+      }}
+    />
+  );
 
-  // Placeholder 제거: onTransitionEnd + fallback timer
-  // onTransitionEnd가 발생하지 않는 케이스 대비 (캐시 히트, 백그라운드 탭, reduced-motion 등)
-  useEffect(() => {
-    if (isImageLoaded && !isPlaceholderRemoved) {
-      const timer = setTimeout(() => setIsPlaceholderRemoved(true), 600);
-      return () => clearTimeout(timer);
-    }
-  }, [isImageLoaded, isPlaceholderRemoved]);
-
-  // 7. 컨테이너 스타일 계산 (기존 로직 유지)
-  const containerStyle: CSSProperties = fill
-    ? {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        height: "100%",
-        overflow: "hidden",
-      }
-    : {
-        position: "relative",
-        width: "100%",
-        overflow: "hidden",
-        // Standard 모드일 때 aspect-ratio 처리
-        ...(currentWidth && currentHeight
-          ? { aspectRatio: `${currentWidth} / ${currentHeight}` }
-          : {}),
-      };
-
-  const mergedContainerStyle = { ...containerStyle, ...style };
-
-  // 8. 실제 이미지 스타일 (기존 로직 유지)
-  const imgStyle: CSSProperties = {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  };
-
-  // 9. Placeholder 스타일 (blur 모드일 때만 blur 효과 적용)
-  const placeholderStyle: CSSProperties = {
-    ...imgStyle,
-    transition: "opacity 500ms ease-out",
-    opacity: isImageLoaded ? 0 : 1,
-    zIndex: 1,
-    pointerEvents: "none",
-
-    // blur placeholder일 때만 blur 효과 적용
-    ...(placeholder === "blur"
-      ? {
-          filter: "blur(20px)",
-          transform: "scale(1.1)",
-        }
-      : {}),
-  };
+  const responsiveImage: ReactElement =
+    sources && sources.length > 0 ? (
+      <picture>
+        {sources.map((source) => (
+          <source
+            key={`${source.type}:${source.srcSet}`}
+            type={source.type}
+            srcSet={source.srcSet}
+            sizes={currentSizes}
+          />
+        ))}
+        {image}
+      </picture>
+    ) : (
+      image
+    );
 
   return (
-    <div className={className} style={mergedContainerStyle}>
-      {/* 실제 이미지 */}
-      <img
-        {...props}
-        src={finalSrc}
-        srcSet={overrideSrc ? undefined : currentSrcSet}
-        sizes={overrideSrc ? undefined : computedSizes}
-        width={fill ? undefined : currentWidth}
-        height={fill ? undefined : currentHeight}
-        loading={loadingAttr}
-        fetchPriority={priority ? "high" : undefined}
-        decoding={decoding}
-        onLoad={(e) => {
-          setIsImageLoaded(true);
-          onLoad?.(e);
-        }}
-        onError={onError}
-        style={{ ...imgStyle, zIndex: 0 }}
-      />
-
-      {/* Placeholder 레이어: 트랜지션 완료 또는 fallback timer 후 DOM에서 제거 */}
-      {!overrideSrc && hasShowPlaceholder && !isPlaceholderRemoved && (
+    <span className={wrapperClassName} style={mergedWrapperStyle}>
+      {responsiveImage}
+      {placeholderMode === "blur" && (
         <img
-          src={placeholderSrc}
+          src={blurDataURL}
           alt=""
+          role="presentation"
           aria-hidden="true"
-          style={placeholderStyle}
-          onTransitionEnd={(e) => {
-            if (e.propertyName === "opacity" && isImageLoaded) {
-              setIsPlaceholderRemoved(true);
-            }
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            filter: "blur(20px)",
+            transform: "scale(1.1)",
+            transition: "opacity 300ms ease-out",
+            opacity: imageSettled ? 0 : 1,
+            pointerEvents: "none",
           }}
         />
       )}
-    </div>
+    </span>
   );
-}
+});
+
+Image.displayName = "Image";
+
+export default Image;

@@ -4,6 +4,7 @@
     "../src/index.ts",
     "../src/types.ts",
     "../client.d.ts",
-    "./client.ts"
+    "./client.ts",
+    "./react.tsx"
   ]
 }

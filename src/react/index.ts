@@ -1,8 +1,3 @@
-export { default } from "./Image";
+export { default, Image } from "./Image";
 export type { ImageProps } from "./Image";
-export type { ResponsiveImageData } from "../types";
-
-
-
-
-
+export type { OptimizedImageData, OptimizedImageSource } from "../types";
