@@ -52,7 +52,8 @@
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
     "package:check": "pnpm run build && publint && attw --pack . --profile esm-only",
     "check:browser": "pnpm run test:browser",
-    "prepublishOnly": "pnpm run check && pnpm run package:check"
+    "check:release": "pnpm run check && pnpm run check:browser && pnpm run package:check",
+    "prepublishOnly": "pnpm run check:release"
   },
   "keywords": [
     "vite",

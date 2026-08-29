@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import console from "node:console";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -6,6 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
+
+import sharp from "sharp";
 
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
 const temporaryRoot = await mkdtemp(join(tmpdir(), "vite-image-package-consumer-"));
@@ -121,6 +124,54 @@ export const view = <Image {...props} />;
 `,
   );
   await writeFile(join(consumerDirectory, "src/hero.jpg"), "type-only fixture\n");
+  const pixels = Buffer.alloc(6 * 4 * 4);
+  for (let index = 0; index < 6 * 4; index += 1) {
+    const offset = index * 4;
+    pixels[offset] = (index * 31) % 256;
+    pixels[offset + 1] = (index * 47) % 256;
+    pixels[offset + 2] = (index * 67) % 256;
+    pixels[offset + 3] = 255;
+  }
+  await sharp(pixels, {
+    raw: { width: 6, height: 4, channels: 4 },
+  })
+    .png()
+    .toFile(join(consumerDirectory, "src/hero.png"));
+  await writeFile(
+    join(consumerDirectory, "index.html"),
+    '<!doctype html><html><body><script type="module" src="/src/vite-app.ts"></script></body></html>\n',
+  );
+  await writeFile(
+    join(consumerDirectory, "src/vite-app.ts"),
+    `import hero from "./hero.png?vite-image";
+
+const output = document.createElement("pre");
+output.id = "image-data";
+output.textContent = JSON.stringify(hero);
+document.body.append(output);
+`,
+  );
+  await writeFile(
+    join(consumerDirectory, "vite.config.mjs"),
+    `import { defineConfig } from "vite";
+import { viteImage } from "@son426/vite-image/plugin";
+
+export default defineConfig({
+  plugins: [
+    viteImage({
+      widths: [2, 4, 8],
+      formats: ["webp"],
+      placeholder: false,
+    }),
+  ],
+  build: {
+    outDir: "dist-vite",
+    emptyOutDir: true,
+    assetsInlineLimit: 0,
+  },
+});
+`,
+  );
   await writeFile(
     join(consumerDirectory, "runtime.mjs"),
     `import assert from "node:assert/strict";
@@ -133,13 +184,24 @@ import { renderToStaticMarkup } from "react-dom/server";
 assert.equal(typeof root, "object");
 assert.equal(typeof viteImage, "function");
 assert.equal(typeof Image, "object");
-const markup = renderToStaticMarkup(React.createElement(Image, {
-  src: "/hero.jpg",
-  alt: "Hero",
+const optimized = {
+  src: "/hero-6.png",
   width: 6,
   height: 4,
+  srcSet: "/hero-2.png 2w, /hero-4.png 4w, /hero-6.png 6w",
+  sources: [{
+    type: "image/webp",
+    srcSet: "/hero-2.webp 2w, /hero-4.webp 4w, /hero-6.webp 6w",
+  }],
+};
+const markup = renderToStaticMarkup(React.createElement(Image, {
+  src: optimized,
+  alt: "Hero",
 }));
-assert.ok(markup.includes('src="/hero.jpg"'));
+assert.ok(markup.includes("<picture>"));
+assert.ok(markup.includes('type="image/webp"'));
+assert.ok(markup.includes('srcSet="/hero-2.webp 2w, /hero-4.webp 4w, /hero-6.webp 6w"'));
+assert.ok(markup.includes('src="/hero-6.png"'));
 `,
   );
 
@@ -150,6 +212,47 @@ assert.ok(markup.includes('src="/hero.jpg"'));
   );
   run(join(consumerDirectory, "node_modules/.bin/tsc"), ["-p", "tsconfig.json"], consumerDirectory);
   run(process.execPath, ["runtime.mjs"], consumerDirectory);
+  run(
+    join(consumerDirectory, "node_modules/.bin/vite"),
+    ["build", "--config", "vite.config.mjs"],
+    consumerDirectory,
+  );
+
+  const viteOutputDirectory = join(consumerDirectory, "dist-vite");
+  const viteFiles = await readdir(viteOutputDirectory, { recursive: true });
+  const webpFiles = viteFiles.filter((file) => file.endsWith(".webp"));
+  const pngFiles = viteFiles.filter((file) => file.endsWith(".png"));
+  const javascriptFiles = viteFiles.filter((file) => file.endsWith(".js"));
+  assert.equal(webpFiles.length, 3, "packed plugin must emit three WebP assets");
+  assert.equal(pngFiles.length, 3, "packed plugin must emit three PNG fallbacks");
+  assert.ok(javascriptFiles.length > 0, "Vite must emit the consumer application");
+
+  for (const files of [webpFiles, pngFiles]) {
+    const widths = [];
+    for (const file of files) {
+      const metadata = await sharp(join(viteOutputDirectory, file)).metadata();
+      assert.ok(metadata.width);
+      assert.ok(metadata.height);
+      assert.ok(metadata.width <= 6, `unexpected upscale in ${file}`);
+      assert.ok(metadata.height <= 4, `unexpected upscale in ${file}`);
+      widths.push(metadata.width);
+    }
+    assert.deepEqual(widths.sort((left, right) => left - right), [2, 4, 6]);
+  }
+
+  const applicationSource = (
+    await Promise.all(
+      javascriptFiles.map((file) =>
+        readFile(join(viteOutputDirectory, file), "utf8"),
+      ),
+    )
+  ).join("\n");
+  for (const file of [...webpFiles, ...pngFiles]) {
+    assert.ok(
+      applicationSource.includes(file.split("/").at(-1)),
+      `application bundle must reference ${file}`,
+    );
+  }
 
   const installedManifest = JSON.parse(
     await readFile(
@@ -165,7 +268,9 @@ assert.ok(markup.includes('src="/hero.jpg"'));
     "file:",
   );
 
-  console.log("packed consumer: exports, TS 5.4, and React 18 SSR passed");
+  console.log(
+    "packed consumer: exports, TS 5.4, React 18 SSR, and Vite 7 build passed",
+  );
 } finally {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
