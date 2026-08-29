@@ -45,7 +45,7 @@
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
     "package:check": "pnpm run build && publint && attw --pack . --profile esm-only",
     "prepublishOnly": "pnpm run check && pnpm run package:check"
@@ -72,7 +72,7 @@
   "homepage": "https://vite-image.web.app",
   "dependencies": {
     "@rollup/pluginutils": "^5.4.0",
-    "vite-imagetools": "^12.0.1"
+    "vite-imagetools": "^10.0.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

@@ -6,7 +6,7 @@
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": false,
@@ -18,4 +18,3 @@
   "include": ["src/**/*", "client.d.ts"],
   "exclude": ["node_modules", "dist"]
 }
-

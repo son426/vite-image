@@ -19,27 +19,3 @@ declare module "*?vite-image" {
   const imageData: ResponsiveImageData;
   export default imageData;
 }
-
-// srcset 타입
-declare module "*?w=*&format=*&as=srcset" {
-  const srcset: string;
-  export default srcset;
-}
-
-// meta 타입
-declare module "*?w=*&format=*&as=meta" {
-  interface ImageMeta {
-    src: string;
-    width: number;
-    height: number;
-    format?: string;
-  }
-  const meta: ImageMeta;
-  export default meta;
-}
-
-// inline (LQIP) 타입
-declare module "*?w=*&blur=*&quality=*&format=*&inline" {
-  const src: string;
-  export default src;
-}
