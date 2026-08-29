@@ -1,7 +1,13 @@
+# `package.json#files` is the publication allowlist. Keep these exclusions as a
+# guardrail for tooling that does not honor it.
 # Source files
 src/
+demo/
 tsconfig.json
 tsup.config.ts
+eslint.config.js
+pnpm-workspace.yaml
+pnpm-lock.yaml
 
 # Development files
 *.log
@@ -28,10 +34,3 @@ coverage/
 # Misc
 .env
 .env.local
-
-
-
-
-
-
-

@@ -1,5 +1,3 @@
-// tsup.config.ts
-
 import { defineConfig } from "tsup";
 
 export default defineConfig({
@@ -9,15 +7,12 @@ export default defineConfig({
     "plugin/index": "src/plugin/index.ts",
   },
   format: ["esm"],
-  dts: {
-    resolve: true,
-  },
+  dts: true,
   splitting: false,
   sourcemap: true,
   clean: true,
   treeshake: true,
+  target: "es2022",
   external: ["react", "react-dom", "vite", "vite-imagetools"],
-  onSuccess: "echo 'Build complete'",
 });
-
 

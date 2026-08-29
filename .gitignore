@@ -9,6 +9,7 @@ coverage/
 # Production
 dist/
 build/
+*.tgz
 
 # Misc
 .DS_Store
@@ -41,4 +42,3 @@ lerna-debug.log*
 # Documentation (except README.md)
 *.md
 !README.md
-
