@@ -42,3 +42,6 @@ lerna-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Firebase
+.firebase/
